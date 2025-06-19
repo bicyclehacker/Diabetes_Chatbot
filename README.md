@@ -1,114 +1,133 @@
-# ChatGPT
-This clone is made with MERN and uses OpenAI API.
+# ChatGPT Clone
 
-This project is clone of chatGPT , chatGPT is an AI . It's allows you to have human-like conversations.
+A simple **ChatGPT clone** built using the **MERN stack (MongoDB, Express.js, React, Node.js)**. This project uses the **OpenAI API** to allow human-like conversations, just like the real ChatGPT.
 
-## Features
+---
 
-- PWA
-- Offline
-- Password login
-- Forgot password
-- Google login & signup
-- Chat 
-- Auto chat save
-- History Save
-- Account delete option
-- Light & Dark mode
-- Responsive Design
+## ✨ Features
 
-## Prerequisites
+* Chat with AI (using OpenAI)
+* Google login & signup
+* Email/password login
+* Forgot password option
+* Save chat history
+* Auto-save chat
+* Delete account option
+* Light & Dark modes
+* Works offline (PWA)
+* Mobile responsive design
 
-- get your api key from https://openai.com/api/
+---
 
-Make sure you have installed all of the following prerequisites on your development machine:
+## 🛠️ Tech Stack
 
-- Node Js & Npm [Download and Install](https://nodejs.org/en)
-- MongoDB [Download and Install](https://www.mongodb.com/docs/manual/installation/)
-- Git [Download and Install](https://git-scm.com/downloads)
+**Frontend:**
 
-## Technology Used
+* Vite
+* React.js
+* SCSS
+* Redux Toolkit
 
-#vite #reactjs #scss #redux-toolkit
+**Backend:**
 
-#nodejs #expressjs #mongodb #jsonwebtoken authentication 
+* Node.js
+* Express.js
+* MongoDB
+* JSON Web Token (JWT) for authentication
 
-#javascript
+**Others:**
 
-#openai #chatgpt
+* OpenAI API
+* Google Login
+* JavaScript
 
-## Environment Variables
+---
 
-To run this project, you will need to add the following environment variables to your .env file in server directory
+## ✅ Prerequisites
 
-`PORT` = `5000`
+Before you begin, make sure you have the following installed:
 
-`MONGO_URL`
+* [Node.js & npm](https://nodejs.org/)
+* [MongoDB](https://www.mongodb.com/)
+* [Git](https://git-scm.com/)
+* An [OpenAI API key](https://openai.com/api/)
 
-`SITE_URL`
+---
 
-`JWT_PRIVATE_KEY`
+## 🔐 Environment Variables
 
-`OPENAI_API_KEY`
+### Backend (`/server/.env`)
 
-`OPENAI_ORGANIZATION`
+Create a `.env` file inside the `server` folder with the following:
 
-`MAIL_EMAIL`
-
-`MAIL_SECRET`
-
-To run this project, you will need to add the following environment variables to your .env.local file in client directory
-
-`VITE_CLIENT_ID` #Google login api client id
-
-## Run Locally
-
-Clone the project
-
-```bash
-  git clone https://github.com/ansonbenny/ChatGPT.git
+```
+PORT=5000
+MONGO_URL=your_mongodb_connection_string
+SITE_URL=http://localhost:5173
+JWT_PRIVATE_KEY=your_jwt_secret
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_ORGANIZATION=your_openai_organization_id
+MAIL_EMAIL=your_email@example.com
+MAIL_SECRET=your_email_secret
 ```
 
-##To Start BackEnd
+### Frontend (`/client/.env.local`)
 
-Go to the server directory
+Create a `.env.local` file inside the `client` folder with:
 
-```bash
-  cd ChatGPT/server
+```
+VITE_CLIENT_ID=your_google_oauth_client_id
 ```
 
-Install dependencies
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the Repository
 
 ```bash
-  npm install
+git clone https://github.com/ansonbenny/ChatGPT.git
 ```
 
-Start
+---
+
+### 2. Start the Backend
 
 ```bash
-  npm start
+cd ChatGPT/server
+npm install
+npm start
 ```
 
-##To Start FrontEnd
+---
 
-Go to the client directory
+### 3. Start the Frontend
 
 ```bash
-  cd ChatGPT/client
+cd ChatGPT/client
+npm install
+npm run dev
 ```
 
-Install dependencies
+---
 
-```bash
-  npm install
+## 🌐 Access the App
+
+Once both the frontend and backend are running, open your browser and go to:
+
+```
+http://localhost:5173
 ```
 
-Start
+---
 
-```bash
-  npm run dev
-```
+## 📌 Notes
 
+* You need an OpenAI API key for the chat to work.
+* Google login requires a valid OAuth Client ID (you can get it from the [Google Developer Console](https://console.cloud.google.com/)).
+* For email features like "Forgot Password", you need to configure email credentials correctly.
+
+---
 
 ## Demo
 
