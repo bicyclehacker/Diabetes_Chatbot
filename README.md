@@ -74,5 +74,3 @@
 | GET    | `/`      | List all reminders | –                                         | ✅   |
 | PUT    | `/:id`   | Update a reminder  | Same as POST                              | ✅   |
 | DELETE | `/:id`   | Delete a reminder  | –                                         | ✅   |
-
-"""
