@@ -15,12 +15,21 @@
 
 ---
 
-## 🤖 Chatbot Routes – `/api/chat`
+## 🤖 Chat Routes – `/api/chat`
 
 | Method | Endpoint | Description                | Body Params | Auth |
 | ------ | -------- | -------------------------- | ----------- | ---- |
-| POST   | `/`      | Send message to chatbot    | `message`   | ✅   |
+| POST   | `/`      | Send message to chatbot    | `title`     | ✅   |
 | GET    | `/`      | Get all past chat messages | –           | ✅   |
+
+---
+
+## 💬 Message Routes – `/api/messages`
+
+| Method | Endpoint | Description                              | Body Params         | Auth |
+| ------ | -------- | ---------------------------------------- | ------------------- | ---- |
+| POST   | `/`      | Send a message in chat                   | `chatId`, `message` | ✅   |
+| GET    | `/`      | Get all messages (optionally for a chat) | –                   | ✅   |
 
 ---
 
@@ -54,15 +63,6 @@
 | GET    | `/`      | Get all medications | –                                 | ✅   |
 | PUT    | `/:id`   | Update medication   | Same as POST                      | ✅   |
 | DELETE | `/:id`   | Delete medication   | –                                 | ✅   |
-
----
-
-## 💬 Message Routes – `/api/messages`
-
-| Method | Endpoint | Description                              | Body Params         | Auth |
-| ------ | -------- | ---------------------------------------- | ------------------- | ---- |
-| POST   | `/`      | Send a message in chat                   | `chatId`, `message` | ✅   |
-| GET    | `/`      | Get all messages (optionally for a chat) | –                   | ✅   |
 
 ---
 
