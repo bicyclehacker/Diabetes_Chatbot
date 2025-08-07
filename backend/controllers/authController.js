@@ -75,10 +75,26 @@ exports.getUser = async (req, res) => {
     }
 };
 
+//Update User
+exports.updateUser = async (req, res) => {
+    try {
+        const updates = req.body;
+        const userId = req.userId;
+
+        const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+            new: true,
+        }).select('-password');
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ msg: 'Failed to update user', error });
+    }
+};
+
 //Delete User
 exports.deleteAccount = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.userId;
 
         await Promise.all([
             User.findByIdAndDelete(userId),
@@ -95,6 +111,7 @@ exports.deleteAccount = async (req, res) => {
         res.status(500).json({
             message: 'Failed to delete account',
             error: err.message,
+            stack: err.stack,
         });
     }
 };

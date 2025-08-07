@@ -1,3 +1,5 @@
+import { User } from '@/components/settings';
+
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export const fetchWithAuth = async (
@@ -16,7 +18,6 @@ export const fetchWithAuth = async (
     });
 
     if (response.status === 401) {
-        // Handle token expiration
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/auth/signin';
@@ -24,11 +25,27 @@ export const fetchWithAuth = async (
     }
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'API request failed');
+        let errorMessage = 'API request failed';
+        try {
+            const errorData = await response.json();
+            // console.error('Server Error Response: ', errorData);
+            errorMessage = errorData.message || errorMessage;
+        } catch (err) {
+            // Fallback if response is not JSON
+            const text = await response.text();
+            if (text && text.length < 500) {
+                errorMessage = text;
+            }
+        }
+
+        throw new Error(errorMessage);
     }
 
-    return response.json();
+    try {
+        return await response.json();
+    } catch {
+        return null; // In case response is empty (like DELETE)
+    }
 };
 
 export const api = {
@@ -43,6 +60,23 @@ export const api = {
         fetchWithAuth('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
+        }),
+
+    // Get User
+    getUser: () => fetchWithAuth('/auth/me'),
+
+    //Update User
+    updateUser: (data: Partial<User>) =>
+        fetchWithAuth('/auth/me', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    // Delete User
+    deleteUser: () =>
+        fetchWithAuth('/auth/delete', {
+            method: 'DELETE',
         }),
 
     // Glucose

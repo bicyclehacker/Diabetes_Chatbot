@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,59 +10,195 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { User, Bell, Shield, Globe, Moon, Sun, Save, Trash2 } from "lucide-react"
 
+import { api } from "@/lib/api"
+
+export interface User {
+   name: string
+  email: string
+  phone: string
+  dateOfBirth: string
+  diabetesType: string
+  diagnosisDate: string
+  emergencyContact: string
+  preferences: {
+    glucoseUnit: string
+    timeFormat: string
+    language: string
+    theme: string
+  }
+  notifications: {
+    medicationReminders: boolean
+    glucoseAlerts: boolean
+    appointmentReminders: boolean
+    pushNotifications: boolean
+    emailNotifications: boolean
+  }
+  privacy: {
+    shareDataWithDoctor: boolean
+    anonymousAnalytics: boolean
+    dataExport: boolean
+  }
+  //add more field
+}
+
+
 export function Settings() {
-  const [profile, setProfile] = useState({
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    dateOfBirth: "1985-06-15",
-    diabetesType: "type-2",
-    diagnosisDate: "2020-03-15",
-    emergencyContact: "John Johnson - +1 (555) 987-6543",
-  })
 
-  const [preferences, setPreferences] = useState({
-    glucoseUnit: "mg-dl",
-    timeFormat: "12-hour",
-    language: "en",
-    timezone: "America/New_York",
-    theme: "light",
-  })
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-  const [notifications, setNotifications] = useState({
-    medicationReminders: true,
-    glucoseAlerts: true,
-    appointmentReminders: true,
-    weeklyReports: false,
-    emergencyAlerts: true,
-    pushNotifications: true,
-    emailNotifications: false,
-    smsNotifications: true,
-  })
+    // Profile, Preferences, Notifications, Privacy
+    const [profile, setProfile] = useState({
+      name: "",
+      email: "",
+      phone: "",
+      dateOfBirth: "",
+      diabetesType: "",
+      diagnosisDate: "",
+      emergencyContact: "",
+    })     
+    const [preferences, setPreferences] = useState({
+      glucoseUnit: "mg-dl",
+      timeFormat: "12-hour",
+      language: "en",
+      timezone: "Asia/Kolkata", // or your default
+      theme: "light",
+    })     
+    const [notifications, setNotifications] = useState({
+      medicationReminders: true,
+      glucoseAlerts: true,
+      appointmentReminders: true,
+      weeklyReports: false,
+      emergencyAlerts: true,
+      pushNotifications: true,
+      emailNotifications: false,
+      smsNotifications: true,
+    })     
+    const [privacy, setPrivacy] = useState({
+      shareDataWithDoctor: true,
+      anonymousAnalytics: false,
+      marketingEmails: false,
+      dataExport: true,
+    })
+    
+    useEffect(() => {
+        const fetchUser = async () => {
+          try {
+            const userData = await api.getUser();
+            if (!userData) throw new Error("User not found");
 
-  const [privacy, setPrivacy] = useState({
-    shareDataWithDoctor: true,
-    anonymousAnalytics: false,
-    marketingEmails: false,
-    dataExport: true,
-  })
+            // Update user and profile state
+            setUser(userData);
 
-  const handleSaveProfile = () => {
+            setProfile({
+              name: userData.name || "",
+              email: userData.email || "",
+              phone: userData.phone || "",
+              dateOfBirth: userData.dateOfBirth || "",
+              diabetesType: userData.diabetesType || "",
+              diagnosisDate: userData.diagnosisDate || "",
+              emergencyContact: userData.emergencyContact || "",
+            });
+        
+            setPreferences({
+              glucoseUnit: userData.preferences?.glucoseUnit || "mg-dl",
+              timeFormat: userData.preferences?.timeFormat || "12-hour",
+              language: userData.preferences?.language || "en",
+              timezone: userData.preferences?.timezone || "Asia/Kolkata",
+              theme: userData.preferences?.theme || "light",
+            });
+        
+            setNotifications({
+              medicationReminders: userData.notifications?.medicationReminders ?? true,
+              glucoseAlerts: userData.notifications?.glucoseAlerts ?? true,
+              appointmentReminders: userData.notifications?.appointmentReminders ?? true,
+              weeklyReports: userData.notifications?.weeklyReports ?? false,
+              emergencyAlerts: userData.notifications?.emergencyAlerts ?? true,
+              pushNotifications: userData.notifications?.pushNotifications ?? true,
+              emailNotifications: userData.notifications?.emailNotifications ?? false,
+              smsNotifications: userData.notifications?.smsNotifications ?? true,
+            });
+        
+            setPrivacy({
+              shareDataWithDoctor: userData.privacy?.shareDataWithDoctor ?? true,
+              anonymousAnalytics: userData.privacy?.anonymousAnalytics ?? false,
+              marketingEmails: userData.privacy?.marketingEmails ?? false,
+              dataExport: userData.privacy?.dataExport ?? true,
+            });
+
+          } catch (err: any) {
+            console.error(err);
+            setError(err.message || "Failed to load user");
+          } finally {
+            setLoading(false);
+          }
+        };
+      fetchUser();
+    }, []);
+
+  const handleSaveProfile = async () => {
     // Save profile logic
-    console.log("Profile saved:", profile)
+     try {
+    await api.updateUser({ ...profile })
+    alert("Profile updated successfully!")
+  } catch (err) {
+    console.error("Failed to update profile", err)
+    alert("Error updating profile.")
+  }
+     
   }
 
-  const handleSavePreferences = () => {
+  const handleSavePreferences = async () => {
     // Save preferences logic
-    console.log("Preferences saved:", preferences)
+     try {
+       await api.updateUser({ preferences })
+       alert("Preferences updated successfully!")
+     } catch (err) {
+       console.error("Failed to update preferences", err)
+       alert("Error updating preferences.")
+     }
+   
   }
 
-  const handleDeleteAccount = () => {
-    // Delete account logic
-    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      console.log("Account deletion requested")
+    const handleSaveNotifications = async () => {
+      try {
+        await api.updateUser({ notifications })
+        alert("Notifications updated successfully!")
+      } catch (err) {
+        console.error("Failed to update notifications", err)
+        alert("Error updating notifications.")
+      }
     }
+
+    const handleSavePrivacy = async () => {
+      try {
+        await api.updateUser({ privacy })
+        alert("Privacy settings updated successfully!")
+      } catch (err) {
+        console.error("Failed to update privacy", err)
+        alert("Error updating privacy settings.")
+      }
+    }
+
+
+
+
+  const handleDeleteAccount = async () => {
+  const confirmDelete = confirm("Are you sure you want to delete your account? This action cannot be undone.");
+  if (!confirmDelete) return;
+
+  try {
+    await api.deleteUser();
+    alert("Account deleted successfully.");
+    localStorage.clear();
+    window.location.href = "/"; 
+  } catch (err) {
+    console.error("Failed to delete account", err);
+    alert("Failed to delete account. Please try again.");
   }
+};
+
 
   return (
     <div className="space-y-4 sm:space-y-6">
