@@ -108,8 +108,7 @@ export default function Dashboard() {
       }
 
       fetchUser()
-    }, [])
-
+    }, []);
 
   const AppSidebar = () => {
     const { setOpenMobile } = useSidebar()

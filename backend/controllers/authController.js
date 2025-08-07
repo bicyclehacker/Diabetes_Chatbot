@@ -11,19 +11,18 @@ const Message = require('../models/Message');
 // Register
 exports.register = async (req, res) => {
     try {
-        const {
-            name,
-            email,
-            password,
-            age,
-            gender,
-            health_conditions,
-            preferences,
-        } = req.body;
+        const { name, email, password } = req.body;
+
+        if (!name || !email || !password) {
+            return res
+                .status(400)
+                .json({ msg: 'All required fields must be filled' });
+        }
 
         const userExists = await User.findOne({ email });
-        if (userExists)
+        if (userExists) {
             return res.status(400).json({ msg: 'User already exists' });
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -31,10 +30,6 @@ exports.register = async (req, res) => {
             name,
             email,
             password: hashedPassword,
-            age,
-            gender,
-            health_conditions,
-            preferences,
         });
 
         await user.save();
@@ -42,9 +37,10 @@ exports.register = async (req, res) => {
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
             expiresIn: '7d',
         });
+
         res.status(201).json({ token, user });
     } catch (err) {
-        res.status(500).json({ msg: 'Server Error' });
+        res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 };
 

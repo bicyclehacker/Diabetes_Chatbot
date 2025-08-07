@@ -12,6 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Heart, Eye, EyeOff, Loader2 } from "lucide-react"
 import Link from "next/link"
 
+import { api } from "@/lib/api"
+
 export default function SignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -36,41 +38,25 @@ export default function SignIn() {
     }
   }, [router])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault()
+      setIsLoading(true)
+      setError("")
 
+      try {
+        const { token, user } = await api.login({ email, password })
 
+        localStorage.setItem('token', token)
+        localStorage.setItem('user', JSON.stringify(user))
 
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },  
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.msg || 'Login failed');
+        router.push('/dashboard')
+      } catch (err: any) {
+        setError(err.message || 'Login failed. Please try again.')
+      } finally {
+        setIsLoading(false)
       }
-
-      // Store token and user data
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4">

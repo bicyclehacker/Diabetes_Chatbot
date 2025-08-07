@@ -5,13 +5,14 @@ const userSchema = new mongoose.Schema(
         name: { type: String, required: true },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
-        age: Number,
-        gender: String,
-        health_conditions: [String],
-        preferences: {
-            diet: String,
-            exercise_level: String,
+        phoneNumber: { type: String },
+        dob: { type: Date },
+        diabetesType: {
+            type: String,
+            enum: ['Type 1', 'Type 2', 'Gestation', 'Other'],
         },
+        diagnosisDate: { type: Date },
+        emergencyContact: { type: String },
     },
     { timestamps: true }
 );

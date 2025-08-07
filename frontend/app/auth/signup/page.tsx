@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Heart, Eye, EyeOff, Loader2 } from "lucide-react"
 import Link from "next/link"
 
+import { api } from "@/lib/api"
+
 export default function SignUp() {
   const [formData, setFormData] = useState({
     name: "",
@@ -30,61 +32,40 @@ export default function SignUp() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
-    // Client-side validation
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match")
-      setIsLoading(false)
-      return
-    }
-
-    if (!formData.agreeToTerms) {
-      setError("Please agree to the terms and conditions")
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      e.preventDefault()
+      setIsLoading(true)
+      setError("")
+    
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords don't match")
+        setIsLoading(false)
+        return
+      }
+  
+      if (!formData.agreeToTerms) {
+        setError("Please agree to the terms and conditions")
+        setIsLoading(false)
+        return
+      }
+  
+      try {
+        const { token, user } = await api.register({
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          // Default values for optional fields
-          age: null,
-          gender: '',
-          health_conditions: [],
-          preferences: {}
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.msg || 'Registration failed')
+        })
+    
+        localStorage.setItem('token', token)
+        localStorage.setItem('user', JSON.stringify(user))
+    
+        router.push('/dashboard')
+      } catch (err: any) {
+        setError(err.message || 'Registration failed. Please try again.')
+      } finally {
+        setIsLoading(false)
       }
-
-      const { token, user } = await response.json()
-      
-      // Store token and user data
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
-      
-      // Redirect to dashboard
-      router.push('/dashboard')
-      
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.')
-    } finally {
-      setIsLoading(false)
     }
-  }
+    
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4">
