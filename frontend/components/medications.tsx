@@ -17,7 +17,7 @@ export interface Medication {
   name: string
   dosage: string
   frequency: 'Once Daily' | 'Twice Daily' | 'Three Times Daily' | 'As Needed'
-  times: string,
+  times: string[]
   taken: boolean
   lastTaken?: string
   notes?: string
@@ -34,7 +34,7 @@ export function Medications() {
     name: "",
     dosage: "",
     frequency: "",
-    times: "",
+    times: [""],
     notes: "",
   })
 
@@ -51,36 +51,35 @@ export function Medications() {
         .finally(() => setLoading(false))
     }, [])
 
-   const handleAddMedication = async () => {
-  try {
-    const timesArray = newMedication.times
-      .split(",")
-      .map(t => t.trim())
-      .filter(t => t !== "");
+    const handleAddMedication = async () => {
+      try {
+        // newMedication.times is already string[]
+        const timesArray = newMedication.times.filter(t => t !== "");
 
-    const created = await api.addMedication({
-      name: newMedication.name,
-      dosage: newMedication.dosage,
-      frequency: newMedication.frequency,
-      times: timesArray,
-      notes: newMedication.notes || undefined,
-    });
+        const created = await api.addMedication({
+          name: newMedication.name,
+          dosage: newMedication.dosage,
+          frequency: newMedication.frequency,
+          times: timesArray,
+          notes: newMedication.notes || undefined,
+        });
 
-    setMedications(prev => [created, ...prev]);
+        setMedications(prev => [created, ...prev]);
 
-    setNewMedication({
-      name: "",
-      dosage: "",
-      frequency: "",
-      times: "", 
-      notes: "",
-    });
+        setNewMedication({
+          name: "",
+          dosage: "",
+          frequency: "",
+          times: [""],  // reset to array with one empty string
+          notes: "",
+        });
 
-    setShowAddForm(false);
-  } catch (err) {
-    console.error("Failed to add medication:", err);
-  }
-};
+        setShowAddForm(false);
+      } catch (err) {
+        console.error("Failed to add medication:", err);
+      }
+    };
+
 
     const handleToggleTaken = async (medicationId: string, currentTaken: boolean) => {
       try {
@@ -124,6 +123,14 @@ const handleDeleteMedication = async (id: string) => {
     console.error("Failed to delete medication:", err);
   }
 };
+
+function formatTimeWithAmPm(time24: string) {
+  const [hourStr, minute] = time24.split(':');
+  let hour = parseInt(hourStr, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12 || 12; // convert 0 to 12 for 12 AM
+  return `${hour}:${minute} ${ampm}`;
+}
 
 
 
@@ -238,18 +245,38 @@ const handleDeleteMedication = async (id: string) => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="time">Times (comma separated)</Label>
-                    <Input
-                      id="time"
-                      placeholder="e.g., 08:00, 20:00"
-                      value={newMedication.times} // convert array to string for display
-                      onChange={(e) =>
-                        setNewMedication({
-                          ...newMedication,
-                          times: e.target.value,
-                        })
-                      }
-                    />
+                    <Label>Times</Label>
+                    {newMedication.times.map((time, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="time"
+                          value={time}
+                          onChange={(e) => {
+                            const updatedTimes = [...newMedication.times];
+                            updatedTimes[index] = e.target.value;
+                            setNewMedication({ ...newMedication, times: updatedTimes });
+                          }}
+                        />
+                        {newMedication.times.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedTimes = newMedication.times.filter((_, i) => i !== index);
+                              setNewMedication({ ...newMedication, times: updatedTimes });
+                            }}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setNewMedication({ ...newMedication, times: [...newMedication.times, ""] })}
+                    >
+                      Add Time
+                    </button>
+
 
                 </div>
               </div>
@@ -300,7 +327,26 @@ const handleDeleteMedication = async (id: string) => {
                     <p className="text-xs sm:text-sm text-gray-500">
                       {medication.dosage} - {getFrequencyLabel(medication.frequency)}
                     </p>
-                    <p className="text-xs text-gray-400">Times: {medication.times}</p>
+                    <div className="text-xs text-gray-400">
+                      {medication.times.length > 0 && (
+                        <span className="ml-1 flex flex-wrap gap-1">
+                          {medication.times.map((time, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                               {formatTimeWithAmPm(time)}
+                            </Badge>
+                          ))}
+
+                          <Button
+                          variant="destructive"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleDeleteMedication(medication._id)}
+                        >
+                          <TrashIcon className="h-3 w-3" />
+                        </Button>
+                        </span>
+                      )}
+                    </div>
+
                   </div>
                 </div>
                 <div className="flex items-center justify-between sm:justify-end sm:text-right space-x-2 sm:space-y-1 sm:space-x-0 sm:flex-col">
@@ -319,15 +365,6 @@ const handleDeleteMedication = async (id: string) => {
                   <Badge variant={medication.taken ? "default" : "secondary"} className="shrink-0">
                     {medication.taken ? "Taken" : "Pending"}
                   </Badge>
-                  <p>
-                        <Button
-                          variant="destructive"
-                          className="h-6 w-6 p-0"
-                          onClick={() => handleDeleteMedication(medication._id)}
-                        >
-                          <TrashIcon className="h-3 w-3" />
-                        </Button>
-                  </p>
                 </div>
               </div>
             ))}

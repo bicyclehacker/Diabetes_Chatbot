@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,55 +8,25 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Apple, Utensils, TrendingUp } from "lucide-react"
+import { Plus, Apple, Utensils, TrendingUp, TrashIcon } from "lucide-react"
 
-interface Meal {
-  id: string
-  name: string
-  type: "breakfast" | "lunch" | "dinner" | "snack"
-  time: string
-  date: string
-  carbs: number
-  calories: number
-  description?: string
-  foods: string[]
+import { api } from "@/lib/api"
+
+export interface Meal {
+  _id: string;
+  user: string; 
+  name: string;
+  type: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
+  carbs: number;
+  calories: number;
+  foods: string[];          
+  description?: string;     
+  createdAt: string;        
 }
 
+
 export function Meals() {
-  const [meals, setMeals] = useState<Meal[]>([
-    {
-      id: "1",
-      name: "Oatmeal with Berries",
-      type: "breakfast",
-      time: "08:30",
-      date: "2024-01-15",
-      carbs: 45,
-      calories: 320,
-      description: "Steel-cut oats with blueberries and almonds",
-      foods: ["Oatmeal", "Blueberries", "Almonds", "Milk"],
-    },
-    {
-      id: "2",
-      name: "Grilled Chicken Salad",
-      type: "lunch",
-      time: "13:15",
-      date: "2024-01-15",
-      carbs: 25,
-      calories: 450,
-      description: "Mixed greens with grilled chicken and vinaigrette",
-      foods: ["Chicken breast", "Mixed greens", "Tomatoes", "Cucumber", "Olive oil"],
-    },
-    {
-      id: "3",
-      name: "Apple with Peanut Butter",
-      type: "snack",
-      time: "16:00",
-      date: "2024-01-15",
-      carbs: 20,
-      calories: 180,
-      foods: ["Apple", "Peanut butter"],
-    },
-  ])
+  const [meals, setMeals] = useState<Meal[]>([]);
 
   const [newMeal, setNewMeal] = useState({
     name: "",
@@ -68,29 +38,64 @@ export function Meals() {
   })
 
   const [showAddForm, setShowAddForm] = useState(false)
+  const [loading, setLoading] = useState(true)
+  
 
-  const handleAddMeal = () => {
-    if (newMeal.name && newMeal.type && newMeal.carbs && newMeal.calories) {
-      const now = new Date()
-      const meal: Meal = {
-        id: Date.now().toString(),
-        name: newMeal.name,
-        type: newMeal.type as Meal["type"],
-        time: now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
-        date: now.toISOString().split("T")[0],
-        carbs: Number.parseInt(newMeal.carbs),
-        calories: Number.parseInt(newMeal.calories),
-        description: newMeal.description,
-        foods: newMeal.foods
-          .split(",")
-          .map((f) => f.trim())
-          .filter((f) => f),
+    useEffect(() => {
+      api.getMeals()
+        .then(data => {
+          setMeals(data)
+        })
+        .catch(err => console.error("Failed to load meals:", err))
+        .finally(() => setLoading(false))
+    }, [])
+
+    const handleAddMeal = async () => {
+      if (!newMeal.name || !newMeal.type || !newMeal.carbs || !newMeal.calories) return;
+
+      try {
+        const foodsArray = newMeal.foods
+          .split(',')
+          .map(f => f.trim())
+          .filter(f => f !== '');
+
+        const createdMeal = await api.addMeal({
+          name: newMeal.name,
+          type: newMeal.type as Meal['type'],
+          carbs: Number(newMeal.carbs),
+          calories: Number(newMeal.calories),
+          description: newMeal.description || undefined,
+          foods: foodsArray,
+        });
+
+        setMeals(prevMeals => [createdMeal, ...prevMeals]);
+
+        setNewMeal({
+          name: '',
+          type: '',
+          carbs: '',
+          calories: '',
+          description: '',
+          foods: '',
+        });
+
+        setShowAddForm(false);
+      } catch (error) {
+        console.error('Failed to add meal:', error);
+        // optionally, show error UI here
       }
-      setMeals([meal, ...meals])
-      setNewMeal({ name: "", type: "", carbs: "", calories: "", description: "", foods: "" })
-      setShowAddForm(false)
-    }
-  }
+    };
+
+    const handleDeleteMeal = async (id: string) => {
+      try {
+        await api.deleteMeal(id);
+        setMeals(prev => prev.filter(meal => meal._id !== id));
+      } catch (err) {
+        console.error("Failed to delete meal:", err);
+      }
+    };
+
+
 
   const getMealTypeColor = (type: string) => {
     const colors = {
@@ -114,7 +119,7 @@ export function Meals() {
 
   const totalCarbs = meals.reduce((sum, meal) => sum + meal.carbs, 0)
   const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0)
-  const mealsToday = meals.filter((meal) => meal.date === new Date().toISOString().split("T")[0]).length
+  const mealsToday = meals.filter((meal) => meal.createdAt === new Date().toISOString().split("T")[0]).length
 
   return (
     <div className="space-y-6">
@@ -191,10 +196,10 @@ export function Meals() {
                       <SelectValue placeholder="Select meal type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="breakfast">Breakfast</SelectItem>
-                      <SelectItem value="lunch">Lunch</SelectItem>
-                      <SelectItem value="dinner">Dinner</SelectItem>
-                      <SelectItem value="snack">Snack</SelectItem>
+                      <SelectItem value="Breakfast">Breakfast</SelectItem>
+                      <SelectItem value="Lunch">Lunch</SelectItem>
+                      <SelectItem value="Dinner">Dinner</SelectItem>
+                      <SelectItem value="Snack">Snack</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -254,14 +259,14 @@ export function Meals() {
           {/* Meals List */}
           <div className="space-y-3">
             {meals.map((meal) => (
-              <div key={meal.id} className="p-3 sm:p-4 border rounded-lg bg-white">
+              <div key={meal._id} className="p-3 sm:p-4 border rounded-lg bg-white">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 space-y-2 sm:space-y-0">
                   <div className="flex items-center space-x-3">
                     <Badge className={getMealTypeColor(meal.type)}>{getMealTypeLabel(meal.type)}</Badge>
                     <div className="min-w-0">
                       <h3 className="font-medium text-sm sm:text-base">{meal.name}</h3>
                       <p className="text-xs sm:text-sm text-gray-500">
-                        {meal.date} at {meal.time}
+                        {new Date(meal.createdAt).toLocaleDateString()} at {new Date(meal.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
@@ -280,6 +285,15 @@ export function Meals() {
                         {food}
                       </Badge>
                     ))}
+                    <p>
+                        <Button
+                          variant="destructive"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleDeleteMeal(meal._id)}
+                        >
+                          <TrashIcon className="h-3 w-3" />
+                        </Button>
+                    </p>
                   </div>
                 )}
               </div>

@@ -152,11 +152,47 @@ export const api = {
             method: 'DELETE',
         }),
 
+    // Meals
+    getMeals: () => fetchWithAuth('/meals/'),
+
+    addMeal: (data: {
+        name: string;
+        type: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
+        carbs: number;
+        calories: number;
+        foods: string[];
+        description?: string;
+    }) =>
+        fetchWithAuth('/meals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    updateMeal: (
+        id: string,
+        data: {
+            name?: string;
+            type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
+            carbs?: number;
+            calories?: number;
+            foods?: string[];
+            description?: string;
+        }
+    ) =>
+        fetchWithAuth(`/meals/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    deleteMeal: (id: string) =>
+        fetchWithAuth(`/meals/${id}`, {
+            method: 'DELETE',
+        }),
+
     // Reminders
     getReminders: () => fetchWithAuth('/reminders'),
-
-    // Meals
-    getMeals: () => fetchWithAuth('/meals'),
 
     // Chats
     getChats: () => fetchWithAuth('/chats'),
