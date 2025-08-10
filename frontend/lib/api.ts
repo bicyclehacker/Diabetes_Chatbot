@@ -113,8 +113,44 @@ export const api = {
             method: 'DELETE',
         }),
 
-    // Medications
-    getMedications: () => fetchWithAuth('/medications'),
+    // Medication
+    getMedications: () => fetchWithAuth('/medications/'),
+
+    addMedication: (data: {
+        name: string;
+        dosage: string;
+        frequency: string;
+        times: string[]; // e.g., ["08:00 AM", "08:00 PM"]
+        notes?: string;
+    }) =>
+        fetchWithAuth('/medications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    updateMedication: (
+        id: string,
+        data: {
+            name?: string;
+            dosage?: string;
+            frequency?: string;
+            times?: string[];
+            notes?: string;
+            taken?: boolean;
+            lastTaken?: string;
+        }
+    ) =>
+        fetchWithAuth(`/medications/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    deleteMedication: (id: string) =>
+        fetchWithAuth(`/medications/${id}`, {
+            method: 'DELETE',
+        }),
 
     // Reminders
     getReminders: () => fetchWithAuth('/reminders'),

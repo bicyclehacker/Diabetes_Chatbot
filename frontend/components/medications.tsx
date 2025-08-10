@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,91 +8,124 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Pill, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import { Plus, Pill, Clock, CheckCircle, AlertCircle, TrashIcon } from "lucide-react"
 
-interface Medication {
-  id: string
+import { api } from "@/lib/api"
+
+export interface Medication {
+  _id: string
   name: string
   dosage: string
-  frequency: string
-  time: string[]
+  frequency: 'Once Daily' | 'Twice Daily' | 'Three Times Daily' | 'As Needed'
+  times: string,
   taken: boolean
   lastTaken?: string
   notes?: string
+  createdAt: string
 }
 
+
+
 export function Medications() {
-  const [medications, setMedications] = useState<Medication[]>([
-    {
-      id: "1",
-      name: "Metformin",
-      dosage: "500mg",
-      frequency: "twice-daily",
-      time: ["08:00", "20:00"],
-      taken: true,
-      lastTaken: "2024-01-15 08:00",
-      notes: "Take with food",
-    },
-    {
-      id: "2",
-      name: "Insulin Glargine",
-      dosage: "20 units",
-      frequency: "once-daily",
-      time: ["22:00"],
-      taken: false,
-      notes: "Bedtime injection",
-    },
-    {
-      id: "3",
-      name: "Lisinopril",
-      dosage: "10mg",
-      frequency: "once-daily",
-      time: ["08:00"],
-      taken: true,
-      lastTaken: "2024-01-15 08:15",
-    },
-  ])
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [loading, setLoading] = useState(true)
 
   const [newMedication, setNewMedication] = useState({
     name: "",
     dosage: "",
     frequency: "",
-    time: "",
+    times: "",
     notes: "",
   })
 
   const [showAddForm, setShowAddForm] = useState(false)
 
-  const handleAddMedication = () => {
-    if (newMedication.name && newMedication.dosage && newMedication.frequency) {
-      const medication: Medication = {
-        id: Date.now().toString(),
-        name: newMedication.name,
-        dosage: newMedication.dosage,
-        frequency: newMedication.frequency,
-        time: newMedication.time.split(",").map((t) => t.trim()),
-        taken: false,
-        notes: newMedication.notes,
-      }
-      setMedications([...medications, medication])
-      setNewMedication({ name: "", dosage: "", frequency: "", time: "", notes: "" })
-      setShowAddForm(false)
-    }
-  }
 
-  const toggleMedicationTaken = (id: string) => {
-    setMedications(
-      medications.map((med) =>
-        med.id === id
-          ? {
-              ...med,
-              taken: !med.taken,
-              lastTaken: !med.taken ? new Date().toISOString().slice(0, 16).replace("T", " ") : med.lastTaken,
-            }
-          : med,
-      ),
-    )
+  useEffect(() => {
+      api.getMedications()
+        .then(data => {
+          // store whatever you get into readings state
+          setMedications(data)
+        })
+        .catch(err => console.error("Failed to load readings:", err))
+        .finally(() => setLoading(false))
+    }, [])
+
+   const handleAddMedication = async () => {
+  try {
+    const timesArray = newMedication.times
+      .split(",")
+      .map(t => t.trim())
+      .filter(t => t !== "");
+
+    const created = await api.addMedication({
+      name: newMedication.name,
+      dosage: newMedication.dosage,
+      frequency: newMedication.frequency,
+      times: timesArray,
+      notes: newMedication.notes || undefined,
+    });
+
+    setMedications(prev => [created, ...prev]);
+
+    setNewMedication({
+      name: "",
+      dosage: "",
+      frequency: "",
+      times: "", 
+      notes: "",
+    });
+
+    setShowAddForm(false);
+  } catch (err) {
+    console.error("Failed to add medication:", err);
   }
+};
+
+    const handleToggleTaken = async (medicationId: string, currentTaken: boolean) => {
+      try {
+        // Call backend to update the 'taken' value to !currentTaken
+        const updatedMedication = await api.updateMedication(medicationId, {
+          taken: !currentTaken,
+          lastTaken: !currentTaken ? new Date().toISOString() : undefined,
+        });
+
+        // Update frontend state by replacing the updated medication
+        setMedications(prev =>
+          prev.map(med =>
+            med._id === medicationId ? updatedMedication : med
+          )
+        );
+      } catch (err) {
+        console.error('Failed to toggle taken:', err);
+      }
+    };
+
+
+const toggleMedicationTaken = async (id: string, currentTaken: boolean) => {
+  try {
+    const updated = await api.updateMedication(id, {
+      taken: !currentTaken,
+      lastTaken: !currentTaken ? new Date().toISOString() : undefined,
+    });
+    setMedications((prev) =>
+      prev.map((med) => (med._id === id ? updated : med))
+    );
+  } catch (error) {
+    console.error('Failed to toggle taken:', error);
+  }
+};
+
+const handleDeleteMedication = async (id: string) => {
+  try {
+    await api.deleteMedication(id);
+    setMedications(prev => prev.filter(med => med._id !== id));
+  } catch (err) {
+    console.error("Failed to delete medication:", err);
+  }
+};
+
+
 
   const getFrequencyLabel = (frequency: string) => {
     const labels = {
@@ -197,21 +230,27 @@ export function Medications() {
                       <SelectValue placeholder="Select frequency" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="once-daily">Once Daily</SelectItem>
-                      <SelectItem value="twice-daily">Twice Daily</SelectItem>
-                      <SelectItem value="three-times-daily">Three Times Daily</SelectItem>
-                      <SelectItem value="as-needed">As Needed</SelectItem>
+                      <SelectItem value="Once Daily">Once Daily</SelectItem>
+                      <SelectItem value="Twice Daily">Twice Daily</SelectItem>
+                      <SelectItem value="Three Times Daily">Three Times Daily</SelectItem>
+                      <SelectItem value="As Needed">As Needed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="time">Times (comma separated)</Label>
-                  <Input
-                    id="time"
-                    placeholder="e.g., 08:00, 20:00"
-                    value={newMedication.time}
-                    onChange={(e) => setNewMedication({ ...newMedication, time: e.target.value })}
-                  />
+                    <Input
+                      id="time"
+                      placeholder="e.g., 08:00, 20:00"
+                      value={newMedication.times} // convert array to string for display
+                      onChange={(e) =>
+                        setNewMedication({
+                          ...newMedication,
+                          times: e.target.value,
+                        })
+                      }
+                    />
+
                 </div>
               </div>
               <div className="space-y-2">
@@ -241,12 +280,15 @@ export function Medications() {
           <div className="space-y-3">
             {medications.map((medication) => (
               <div
-                key={medication.id}
+                key={medication._id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg bg-white space-y-3 sm:space-y-0"
               >
                 <div className="flex items-start space-x-3 sm:space-x-4 min-w-0 flex-1">
                   <div className="flex items-center space-x-2 shrink-0">
-                    <Switch checked={medication.taken} onCheckedChange={() => toggleMedicationTaken(medication.id)} />
+                        <Switch
+                          checked={medication.taken}
+                          onCheckedChange={() => toggleMedicationTaken(medication._id, medication.taken)}
+                        />
                     {medication.taken ? (
                       <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                     ) : (
@@ -258,7 +300,7 @@ export function Medications() {
                     <p className="text-xs sm:text-sm text-gray-500">
                       {medication.dosage} - {getFrequencyLabel(medication.frequency)}
                     </p>
-                    <p className="text-xs text-gray-400">Times: {medication.time.join(", ")}</p>
+                    <p className="text-xs text-gray-400">Times: {medication.times}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between sm:justify-end sm:text-right space-x-2 sm:space-y-1 sm:space-x-0 sm:flex-col">
@@ -268,11 +310,24 @@ export function Medications() {
                     </p>
                   )}
                   {medication.lastTaken && (
-                    <p className="text-xs text-gray-400 hidden sm:block">Last taken: {medication.lastTaken}</p>
+                    <p className="text-xs text-gray-400 hidden sm:block">Last taken: {medication.lastTaken && (
+                          <>
+                            {new Date(medication.lastTaken).toLocaleDateString()} at {new Date(medication.lastTaken).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </>
+                        )}</p>
                   )}
                   <Badge variant={medication.taken ? "default" : "secondary"} className="shrink-0">
                     {medication.taken ? "Taken" : "Pending"}
                   </Badge>
+                  <p>
+                        <Button
+                          variant="destructive"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleDeleteMedication(medication._id)}
+                        >
+                          <TrashIcon className="h-3 w-3" />
+                        </Button>
+                  </p>
                 </div>
               </div>
             ))}

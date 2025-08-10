@@ -5,9 +5,12 @@ exports.createMedication = async (req, res) => {
         const medication = await Medication.create({
             ...req.body,
             user: req.user.id,
+            taken: req.body.taken ?? false,
+            lastTaken: req.body.lastTaken ?? null,
         });
         res.status(201).json(medication);
     } catch (err) {
+        console.error('Error creating medication:', err);
         res.status(500).json({
             message: 'Failed to create medication',
             error: err.message,
@@ -34,7 +37,7 @@ exports.updateMedication = async (req, res) => {
         const medication = await Medication.findOneAndUpdate(
             { _id: req.params.id, user: req.user.id },
             req.body,
-            { new: true }
+            { new: true, runValidators: true }
         );
         if (!medication)
             return res.status(404).json({ message: 'Medication not found' });
