@@ -81,10 +81,36 @@ export const api = {
 
     // Glucose
     getGlucoseReadings: () => fetchWithAuth('/glucose'),
-    addGlucoseReading: (data: any) =>
+    addGlucoseReading: (data: {
+        level: number;
+        readingType: string;
+        notes?: string;
+        recordedAt?: Date;
+    }) =>
         fetchWithAuth('/glucose', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
+        }),
+
+    updateGlucoseReading: (
+        id: string,
+        data: {
+            level?: number;
+            readingType?: string;
+            notes?: string;
+            recordedAt?: Date;
+        }
+    ) =>
+        fetchWithAuth(`/glucose/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    deleteGlucoseReading: (id: string) =>
+        fetchWithAuth(`/glucose/${id}`, {
+            method: 'DELETE',
         }),
 
     // Medications
