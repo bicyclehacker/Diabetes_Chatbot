@@ -5,7 +5,7 @@ const glucoseReadingSchema = new mongoose.Schema({
     level: { type: Number, required: true },
     readingType: {
         type: String,
-        enum: ['Fasting', 'Before Meal', 'After Meal', 'Bedtime', 'Random'],
+        enum: ['fasting', 'before-meal', 'after-meal', 'bedtime', 'random'],
         required: true,
     },
     notes: { type: String },

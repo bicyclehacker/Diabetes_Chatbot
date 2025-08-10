@@ -1,50 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Activity, Clock, TrendingUp, TrendingDown } from "lucide-react"
+import { Plus, Activity, Clock, TrendingUp, TrendingDown, TrashIcon } from "lucide-react"
 
-interface GlucoseReading {
-  id: string
-  value: number
-  time: string
-  date: string
-  type: "fasting" | "before-meal" | "after-meal" | "bedtime" | "random"
+import { api } from "@/lib/api"
+
+
+export interface GlucoseReading {
+  _id: string
+  level: number
+  readingType: 'fasting' | 'before-meal' | 'after-meal' | 'bedtime' | 'random'
   notes?: string
+  recordedAt: string 
 }
 
+
 export function GlucoseLog() {
-  const [readings, setReadings] = useState<GlucoseReading[]>([
-    {
-      id: "1",
-      value: 128,
-      time: "08:30",
-      date: "2024-01-15",
-      type: "fasting",
-      notes: "Morning reading",
-    },
-    {
-      id: "2",
-      value: 165,
-      time: "13:45",
-      date: "2024-01-15",
-      type: "after-meal",
-      notes: "After lunch",
-    },
-    {
-      id: "3",
-      value: 142,
-      time: "19:20",
-      date: "2024-01-15",
-      type: "before-meal",
-      notes: "Before dinner",
-    },
-  ])
+  const [readings, setReadings] = useState<GlucoseReading[]>([])
+  const [loading, setLoading] = useState(true)
 
   const [newReading, setNewReading] = useState({
     value: "",
@@ -54,22 +33,45 @@ export function GlucoseLog() {
 
   const [showAddForm, setShowAddForm] = useState(false)
 
-  const handleAddReading = () => {
-    if (newReading.value && newReading.type) {
-      const now = new Date()
-      const reading: GlucoseReading = {
-        id: Date.now().toString(),
-        value: Number.parseInt(newReading.value),
-        time: now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }),
-        date: now.toISOString().split("T")[0],
-        type: newReading.type as GlucoseReading["type"],
-        notes: newReading.notes,
-      }
-      setReadings([reading, ...readings])
+   useEffect(() => {
+    api.getGlucoseReadings()
+      .then(data => {
+        // store whatever you get into readings state
+        setReadings(data)
+      })
+      .catch(err => console.error("Failed to load readings:", err))
+      .finally(() => setLoading(false))
+  }, [])
+
+   const handleAddReading = async () => {
+    try {
+      const created = await api.addGlucoseReading({
+        level: Number(newReading.value),
+        readingType: newReading.type,
+        notes: newReading.notes || undefined,
+        recordedAt: new Date(),
+      })
+
+      // If backend returns full reading object, use that
+      setReadings(prev => [created, ...prev])
+
+      // Clear form
       setNewReading({ value: "", type: "", notes: "" })
       setShowAddForm(false)
+    } catch (err) {
+      console.error("Failed to add reading:", err)
     }
   }
+
+  const handleDeleteReading = async (id: string) => {
+  try {
+    await api.deleteGlucoseReading(id)
+    setReadings((prev) => prev.filter((r) => r._id !== id))
+  } catch (err) {
+    console.error("Failed to delete reading:", err)
+  }
+}
+
 
   const getReadingColor = (value: number, type: string) => {
     if (type === "fasting") {
@@ -97,9 +99,9 @@ export function GlucoseLog() {
   }
 
   const averageReading =
-    readings.length > 0 ? Math.round(readings.reduce((sum, reading) => sum + reading.value, 0) / readings.length) : 0
+    readings.length > 0 ? Math.round(readings.reduce((sum, reading) => sum + reading.level, 0) / readings.length) : 0
 
-  const trend = readings.length >= 2 ? readings[0].value - readings[1].value : 0
+  const trend = readings.length >= 2 ? readings[0].level - readings[1].level : 0
 
   return (
     <div className="space-y-6">
@@ -112,11 +114,11 @@ export function GlucoseLog() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {readings.length > 0 ? `${readings[0].value} mg/dL` : "No data"}
+              {readings.length > 0 ? `${readings[0].level} mg/dL` : "No data"}
             </div>
             <p className="text-xs text-gray-600">
               {readings.length > 0
-                ? `${readings[0].time} - ${getTypeLabel(readings[0].type)}`
+                ? `${readings[0].recordedAt} - ${getTypeLabel(readings[0].readingType)}`
                 : "Add your first reading"}
             </p>
           </CardContent>
@@ -226,19 +228,22 @@ export function GlucoseLog() {
           <div className="space-y-3">
             {readings.map((reading) => (
               <div
-                key={reading.id}
+                key={reading._id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg bg-white space-y-2 sm:space-y-0"
               >
                 <div className="flex items-center space-x-3 sm:space-x-4">
                   <div
-                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getReadingColor(reading.value, reading.type)}`}
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getReadingColor(reading.level, reading.readingType)}`}
                   >
-                    {reading.value} mg/dL
+                    {reading.level} mg/dL
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm sm:text-base">{getTypeLabel(reading.type)}</p>
+                    <p className="font-medium text-sm sm:text-base">{getTypeLabel(reading.readingType)}</p>
                     <p className="text-xs sm:text-sm text-gray-500">
-                      {reading.date} at {reading.time}
+                        {new Date(reading.recordedAt).toLocaleDateString('en-GB')} at {new Date(reading.recordedAt).toLocaleTimeString('en-GB', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                     </p>
                   </div>
                 </div>
@@ -249,8 +254,19 @@ export function GlucoseLog() {
                     </p>
                   )}
                   <Badge variant="outline" className="text-xs shrink-0">
-                    {reading.type}
+                    {reading.readingType}
                   </Badge>
+
+                  <p>
+                    <Button
+                      variant="destructive"
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleDeleteReading(reading._id)}
+                    >
+                      <TrashIcon className="h-3 w-3" />
+                    </Button>
+
+                  </p>
                 </div>
               </div>
             ))}

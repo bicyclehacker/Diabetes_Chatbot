@@ -80,7 +80,7 @@ export const api = {
         }),
 
     // Glucose
-    getGlucoseReadings: () => fetchWithAuth('/glucose'),
+    getGlucoseReadings: () => fetchWithAuth('/glucose/'),
     addGlucoseReading: (data: {
         level: number;
         readingType: string;

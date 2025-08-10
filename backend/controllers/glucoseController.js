@@ -8,6 +8,7 @@ exports.createReading = async (req, res) => {
         });
         res.status(201).json(reading);
     } catch (err) {
+        console.error('Error creating reading:', err);
         res.status(500).json({
             message: 'Failed to create glucose reading',
             error: err.message,

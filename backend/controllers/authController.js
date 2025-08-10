@@ -68,7 +68,7 @@ exports.login = async (req, res) => {
 // Get user
 exports.getUser = async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select('-password');
+        const user = await User.findById(req.user.id).select('-password');
         res.status(200).json(user);
     } catch (err) {
         res.status(500).json({ msg: 'Server Error' });
@@ -79,7 +79,7 @@ exports.getUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
     try {
         const updates = req.body;
-        const userId = req.userId;
+        const userId = req.user.id;
 
         const updatedUser = await User.findByIdAndUpdate(userId, updates, {
             new: true,
@@ -94,7 +94,7 @@ exports.updateUser = async (req, res) => {
 //Delete User
 exports.deleteAccount = async (req, res) => {
     try {
-        const userId = req.userId;
+        const userId = req.user.id;
 
         await Promise.all([
             User.findByIdAndDelete(userId),
