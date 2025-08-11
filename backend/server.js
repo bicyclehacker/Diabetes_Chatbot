@@ -32,8 +32,6 @@ app.use('/api/meals', mealRoutes);
 app.use('/api/medications', medicationRoutes);
 app.use('/api/glucose', glucoseRoutes);
 
-const userRoutes = require('./routes/userRoutes');
-app.use('/api/user', userRoutes);
 
 
 const PORT = process.env.PORT || 5000;
