@@ -24,6 +24,10 @@ app.use(
 );
 app.use(express.json());
 
+const userRoutes = require('./routes/userRoutes.js');
+app.use('/api/users', userRoutes);
+
+
 app.use('/api/auth', authRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/chats', chatRoutes);

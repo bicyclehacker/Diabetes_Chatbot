@@ -76,18 +76,59 @@ exports.getUser = async (req, res) => {
 };
 
 //Update User
+// exports.updateUser = async (req, res) => {
+//     try {
+//         const updates = req.body;
+//         const userId = req.user.id;
+
+//         const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+//             new: true,
+//         }).select('-password');
+
+//         res.status(200).json(updatedUser);
+//     } catch (error) {
+//         res.status(500).json({ msg: 'Failed to update user', error });
+//     }
+// };
+
 exports.updateUser = async (req, res) => {
     try {
-        const updates = req.body;
+        const updates = req.body || {};
         const userId = req.user.id;
 
-        const updatedUser = await User.findByIdAndUpdate(userId, updates, {
-            new: true,
-        }).select('-password');
+        // Whitelist fields that are allowed to be updated
+        const allowed = [
+            'name', 'email', 'phone', 'dateOfBirth', 'diabetesType', 'diagnosisDate', 'emergencyContact',
+            'preferences', 'notifications', 'privacy'
+        ];
+
+        // Build $set object: allow nested updates if client sends dot-notation or full nested object
+        const setObj = {};
+        for (const key of Object.keys(updates)) {
+            if (allowed.includes(key)) {
+                setObj[key] = updates[key];
+            } else {
+                // If client sent nested dot keys like 'notifications.emailNotifications', allow them too
+                if (key.includes('.')) {
+                    setObj[key] = updates[key];
+                }
+            }
+        }
+
+        if (Object.keys(setObj).length === 0) {
+            return res.status(400).json({ msg: 'No valid fields to update' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: setObj },
+            { new: true, runValidators: true }
+        ).select('-password');
 
         res.status(200).json(updatedUser);
     } catch (error) {
-        res.status(500).json({ msg: 'Failed to update user', error });
+        console.error(error);
+        res.status(500).json({ msg: 'Failed to update user', error: error.message });
     }
 };
 
