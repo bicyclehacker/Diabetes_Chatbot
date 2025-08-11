@@ -1,49 +1,73 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
-import { User, Bell, Shield, Globe, Moon, Sun, Save, Trash2 } from "lucide-react"
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import {
+    User as UserIcon,
+    Bell,
+    Shield,
+    Globe,
+    Moon,
+    Sun,
+    Save,
+    Trash2,
+} from "lucide-react";
 
-import { api } from "@/lib/api"
+import { api } from "@/lib/api";
 
 export interface User {
-    name: string
-    email: string
-    phone: string
-    dateOfBirth: string
-    diabetesType: string
-    diagnosisDate: string
-    emergencyContact: string
-    preferences: {
-        glucoseUnit: string
-        timeFormat: string
-        language: string
-        theme: string
-    }
-    notifications: {
-        medicationReminders: boolean
-        glucoseAlerts: boolean
-        appointmentReminders: boolean
-        pushNotifications: boolean
-        emailNotifications: boolean
-    }
-    privacy: {
-        shareDataWithDoctor: boolean
-        anonymousAnalytics: boolean
-        dataExport: boolean
-    }
-    //add more field
+    name: string;
+    email: string;
+    phone?: string;
+    dateOfBirth?: string;
+    diabetesType?: string;
+    diagnosisDate?: string;
+    emergencyContact?: string;
+    preferences?: {
+        glucoseUnit?: string;
+        timeFormat?: string;
+        language?: string;
+        theme?: string;
+        timezone?: string;
+    };
+    notifications?: {
+        medicationReminders?: boolean;
+        glucoseAlerts?: boolean;
+        appointmentReminders?: boolean;
+        weeklyReports?: boolean;
+        emergencyAlerts?: boolean;
+        pushNotifications?: boolean;
+        emailNotifications?: boolean;
+        smsNotifications?: boolean;
+    };
+    privacy?: {
+        shareDataWithDoctor?: boolean;
+        anonymousAnalytics?: boolean;
+        marketingEmails?: boolean;
+        dataExport?: boolean;
+    };
+    // timestamps etc...
 }
 
-
 export function Settings() {
-
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -57,14 +81,14 @@ export function Settings() {
         diabetesType: "",
         diagnosisDate: "",
         emergencyContact: "",
-    })
+    });
     const [preferences, setPreferences] = useState({
         glucoseUnit: "mg-dl",
         timeFormat: "12-hour",
         language: "en",
-        timezone: "Asia/Kolkata", // or your default
+        timezone: "Asia/Kolkata", // default
         theme: "light",
-    })
+    });
     const [notifications, setNotifications] = useState({
         medicationReminders: true,
         glucoseAlerts: true,
@@ -74,13 +98,17 @@ export function Settings() {
         pushNotifications: true,
         emailNotifications: false,
         smsNotifications: true,
-    })
+    });
     const [privacy, setPrivacy] = useState({
         shareDataWithDoctor: true,
         anonymousAnalytics: false,
         marketingEmails: false,
         dataExport: true,
-    })
+    });
+
+    // saving states per toggle to avoid double updates and show disabled state
+    const [savingNotifications, setSavingNotifications] = useState<Record<string, boolean>>({});
+    const [savingPrivacy, setSavingPrivacy] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -88,7 +116,6 @@ export function Settings() {
                 const userData = await api.getUser();
                 if (!userData) throw new Error("User not found");
 
-                // Update user and profile state
                 setUser(userData);
 
                 setProfile({
@@ -114,23 +141,26 @@ export function Settings() {
                 });
 
                 setNotifications({
-                    medicationReminders: userData.notifications?.medicationReminders ?? true,
+                    medicationReminders:
+                        userData.notifications?.medicationReminders ?? true,
                     glucoseAlerts: userData.notifications?.glucoseAlerts ?? true,
-                    appointmentReminders: userData.notifications?.appointmentReminders ?? true,
+                    appointmentReminders:
+                        userData.notifications?.appointmentReminders ?? true,
                     weeklyReports: userData.notifications?.weeklyReports ?? false,
                     emergencyAlerts: userData.notifications?.emergencyAlerts ?? true,
                     pushNotifications: userData.notifications?.pushNotifications ?? true,
-                    emailNotifications: userData.notifications?.emailNotifications ?? false,
+                    emailNotifications:
+                        userData.notifications?.emailNotifications ?? false,
                     smsNotifications: userData.notifications?.smsNotifications ?? true,
                 });
 
                 setPrivacy({
-                    shareDataWithDoctor: userData.privacy?.shareDataWithDoctor ?? true,
+                    shareDataWithDoctor:
+                        userData.privacy?.shareDataWithDoctor ?? true,
                     anonymousAnalytics: userData.privacy?.anonymousAnalytics ?? false,
                     marketingEmails: userData.privacy?.marketingEmails ?? false,
                     dataExport: userData.privacy?.dataExport ?? true,
                 });
-
             } catch (err: any) {
                 console.error(err);
                 setError(err.message || "Failed to load user");
@@ -138,58 +168,140 @@ export function Settings() {
                 setLoading(false);
             }
         };
+
         fetchUser();
     }, []);
 
+    // Generic persist helper for nested objects (notifications / privacy)
+    const persistNestedField = async <T extends object>(
+        topLevelKey: "notifications" | "privacy",
+        newObject: T,
+        keyBeingSaved: string,
+        setSavingMap: React.Dispatch<React.SetStateAction<Record<string, boolean>>>,
+        revertCallback: () => void
+    ) => {
+        try {
+            // mark saving for this key
+            setSavingMap((s) => ({ ...s, [keyBeingSaved]: true }));
+
+            const payload = { [topLevelKey]: newObject } as Partial<User>;
+            const updatedUser = await api.updateUser(payload);
+
+            if (updatedUser) {
+                setUser(updatedUser);
+                if (topLevelKey === "notifications") {
+                    setNotifications((_) => ({
+                        ...notifications,
+                        ...(updatedUser.notifications || (newObject as any)),
+                    }));
+                } else {
+                    setPrivacy((_) => ({
+                        ...privacy,
+                        ...(updatedUser.privacy || (newObject as any)),
+                    }));
+                }
+            }
+        } catch (err) {
+            console.error(`Failed to persist ${topLevelKey}`, err);
+            // revert UI
+            revertCallback();
+            // small user-friendly feedback
+            alert("Failed to save changes. Please try again.");
+        } finally {
+            // clear saving flag
+            setSavingMap((s) => {
+                const copy = { ...s };
+                delete copy[keyBeingSaved];
+                return copy;
+            });
+        }
+    };
+
+    // Notification toggle handler - optimistic update + persist
+    const handleToggleNotification = async (
+        key:
+            | "medicationReminders"
+            | "glucoseAlerts"
+            | "appointmentReminders"
+            | "weeklyReports"
+            | "emergencyAlerts"
+            | "pushNotifications"
+            | "emailNotifications"
+            | "smsNotifications",
+        value: boolean
+    ) => {
+        const prevValue = notifications[key];
+        const newNotifications = { ...notifications, [key]: value };
+
+        // optimistic UI update
+        setNotifications(newNotifications);
+
+        await persistNestedField(
+            "notifications",
+            newNotifications,
+            `notifications.${key}`,
+            setSavingNotifications,
+            () => setNotifications({ ...notifications, [key]: prevValue })
+        );
+    };
+
+    // Privacy toggle handler - optimistic update + persist
+    const handleTogglePrivacy = async (
+        key: "shareDataWithDoctor" | "anonymousAnalytics" | "marketingEmails" | "dataExport",
+        value: boolean
+    ) => {
+        const prevValue = (privacy as any)[key];
+        const newPrivacy = { ...privacy, [key]: value };
+
+        setPrivacy(newPrivacy);
+
+        await persistNestedField(
+            "privacy",
+            newPrivacy,
+            `privacy.${key}`,
+            setSavingPrivacy,
+            () => setPrivacy({ ...privacy, [key]: prevValue })
+        );
+    };
+
+    // Save profile (explicit)
     const handleSaveProfile = async () => {
-        // Save profile logic
         try {
-            await api.updateUser({ ...profile })
-            alert("Profile updated successfully!")
+            const updated = await api.updateUser({ ...profile });
+            if (updated) {
+                setUser(updated);
+                alert("Profile updated successfully!");
+            } else {
+                alert("Profile updated (no fresh data returned).");
+            }
         } catch (err) {
-            console.error("Failed to update profile", err)
-            alert("Error updating profile.")
+            console.error("Failed to update profile", err);
+            alert("Error updating profile.");
         }
+    };
 
-    }
-
+    // Save preferences (explicit)
     const handleSavePreferences = async () => {
-        // Save preferences logic
         try {
-            await api.updateUser({ preferences })
-            alert("Preferences updated successfully!")
+            const updated = await api.updateUser({ preferences });
+            if (updated) {
+                setUser(updated);
+                setPreferences(updated.preferences || preferences);
+                alert("Preferences updated successfully!");
+            } else {
+                alert("Preferences updated (no fresh data returned).");
+            }
         } catch (err) {
-            console.error("Failed to update preferences", err)
-            alert("Error updating preferences.")
+            console.error("Failed to update preferences", err);
+            alert("Error updating preferences.");
         }
+    };
 
-    }
-
-    const handleSaveNotifications = async () => {
-        try {
-            await api.updateUser({ notifications })
-            alert("Notifications updated successfully!")
-        } catch (err) {
-            console.error("Failed to update notifications", err)
-            alert("Error updating notifications.")
-        }
-    }
-
-    const handleSavePrivacy = async () => {
-        try {
-            await api.updateUser({ privacy })
-            alert("Privacy settings updated successfully!")
-        } catch (err) {
-            console.error("Failed to update privacy", err)
-            alert("Error updating privacy settings.")
-        }
-    }
-
-
-
-
+    // Delete account
     const handleDeleteAccount = async () => {
-        const confirmDelete = confirm("Are you sure you want to delete your account? This action cannot be undone.");
+        const confirmDelete = confirm(
+            "Are you sure you want to delete your account? This action cannot be undone."
+        );
         if (!confirmDelete) return;
 
         try {
@@ -203,6 +315,13 @@ export function Settings() {
         }
     };
 
+    if (loading) {
+        return <div>Loading settings...</div>;
+    }
+
+    if (error) {
+        return <div className="text-red-600">Error loading settings: {error}</div>;
+    }
 
     return (
         <div className="space-y-4 sm:space-y-6">
@@ -210,10 +329,12 @@ export function Settings() {
             <Card className="border-0 shadow-lg">
                 <CardHeader className="pb-3 sm:pb-4">
                     <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                        <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <UserIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                         Profile Information
                     </CardTitle>
-                    <CardDescription className="text-sm">Manage your personal information and medical details</CardDescription>
+                    <CardDescription className="text-sm">
+                        Manage your personal information and medical details
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -224,7 +345,9 @@ export function Settings() {
                             <Input
                                 id="name"
                                 value={profile.name}
-                                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                                onChange={(e) =>
+                                    setProfile({ ...profile, name: e.target.value })
+                                }
                                 className="h-9 sm:h-10"
                             />
                         </div>
@@ -236,7 +359,9 @@ export function Settings() {
                                 id="email"
                                 type="email"
                                 value={profile.email}
-                                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                                onChange={(e) =>
+                                    setProfile({ ...profile, email: e.target.value })
+                                }
                                 className="h-9 sm:h-10"
                             />
                         </div>
@@ -247,7 +372,9 @@ export function Settings() {
                             <Input
                                 id="phone"
                                 value={profile.phone}
-                                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                                onChange={(e) =>
+                                    setProfile({ ...profile, phone: e.target.value })
+                                }
                                 className="h-9 sm:h-10"
                             />
                         </div>
@@ -259,7 +386,9 @@ export function Settings() {
                                 id="dob"
                                 type="date"
                                 value={profile.dateOfBirth}
-                                onChange={(e) => setProfile({ ...profile, dateOfBirth: e.target.value })}
+                                onChange={(e) =>
+                                    setProfile({ ...profile, dateOfBirth: e.target.value })
+                                }
                                 className="h-9 sm:h-10"
                             />
                         </div>
@@ -269,7 +398,9 @@ export function Settings() {
                             </Label>
                             <Select
                                 value={profile.diabetesType}
-                                onValueChange={(value) => setProfile({ ...profile, diabetesType: value })}
+                                onValueChange={(value) =>
+                                    setProfile({ ...profile, diabetesType: value })
+                                }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
@@ -290,7 +421,9 @@ export function Settings() {
                                 id="diagnosis-date"
                                 type="date"
                                 value={profile.diagnosisDate}
-                                onChange={(e) => setProfile({ ...profile, diagnosisDate: e.target.value })}
+                                onChange={(e) =>
+                                    setProfile({ ...profile, diagnosisDate: e.target.value })
+                                }
                                 className="h-9 sm:h-10"
                             />
                         </div>
@@ -303,7 +436,9 @@ export function Settings() {
                             id="emergency-contact"
                             placeholder="Name - Phone Number"
                             value={profile.emergencyContact}
-                            onChange={(e) => setProfile({ ...profile, emergencyContact: e.target.value })}
+                            onChange={(e) =>
+                                setProfile({ ...profile, emergencyContact: e.target.value })
+                            }
                             className="h-9 sm:h-10"
                         />
                     </div>
@@ -321,7 +456,9 @@ export function Settings() {
                         <Globe className="h-4 w-4 sm:h-5 sm:w-5" />
                         App Preferences
                     </CardTitle>
-                    <CardDescription className="text-sm">Customize your app experience</CardDescription>
+                    <CardDescription className="text-sm">
+                        Customize your app experience
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -331,7 +468,9 @@ export function Settings() {
                             </Label>
                             <Select
                                 value={preferences.glucoseUnit}
-                                onValueChange={(value) => setPreferences({ ...preferences, glucoseUnit: value })}
+                                onValueChange={(value) =>
+                                    setPreferences({ ...preferences, glucoseUnit: value })
+                                }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
@@ -348,7 +487,9 @@ export function Settings() {
                             </Label>
                             <Select
                                 value={preferences.timeFormat}
-                                onValueChange={(value) => setPreferences({ ...preferences, timeFormat: value })}
+                                onValueChange={(value) =>
+                                    setPreferences({ ...preferences, timeFormat: value })
+                                }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
@@ -365,7 +506,9 @@ export function Settings() {
                             </Label>
                             <Select
                                 value={preferences.language}
-                                onValueChange={(value) => setPreferences({ ...preferences, language: value })}
+                                onValueChange={(value) =>
+                                    setPreferences({ ...preferences, language: value })
+                                }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
@@ -384,7 +527,9 @@ export function Settings() {
                             </Label>
                             <Select
                                 value={preferences.theme}
-                                onValueChange={(value) => setPreferences({ ...preferences, theme: value })}
+                                onValueChange={(value) =>
+                                    setPreferences({ ...preferences, theme: value })
+                                }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
@@ -432,7 +577,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={notifications.medicationReminders}
-                                onCheckedChange={(checked) => setNotifications({ ...notifications, medicationReminders: checked })}
+                                onCheckedChange={(checked: boolean) => handleToggleNotification("medicationReminders", checked)}
+                                disabled={!!savingNotifications["notifications.medicationReminders"]}
                             />
                         </div>
                         <Separator />
@@ -443,7 +589,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={notifications.glucoseAlerts}
-                                onCheckedChange={(checked) => setNotifications({ ...notifications, glucoseAlerts: checked })}
+                                onCheckedChange={(checked: boolean) => handleToggleNotification("glucoseAlerts", checked)}
+                                disabled={!!savingNotifications["notifications.glucoseAlerts"]}
                             />
                         </div>
                         <Separator />
@@ -454,7 +601,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={notifications.appointmentReminders}
-                                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentReminders: checked })}
+                                onCheckedChange={(checked: boolean) => handleToggleNotification("appointmentReminders", checked)}
+                                disabled={!!savingNotifications["notifications.appointmentReminders"]}
                             />
                         </div>
                         <Separator />
@@ -465,7 +613,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={notifications.pushNotifications}
-                                onCheckedChange={(checked) => setNotifications({ ...notifications, pushNotifications: checked })}
+                                onCheckedChange={(checked: boolean) => handleToggleNotification("pushNotifications", checked)}
+                                disabled={!!savingNotifications["notifications.pushNotifications"]}
                             />
                         </div>
                         <Separator />
@@ -476,7 +625,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={notifications.emailNotifications}
-                                onCheckedChange={(checked) => setNotifications({ ...notifications, emailNotifications: checked })}
+                                onCheckedChange={(checked: boolean) => handleToggleNotification("emailNotifications", checked)}
+                                disabled={!!savingNotifications["notifications.emailNotifications"]}
                             />
                         </div>
                     </div>
@@ -501,7 +651,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={privacy.shareDataWithDoctor}
-                                onCheckedChange={(checked) => setPrivacy({ ...privacy, shareDataWithDoctor: checked })}
+                                onCheckedChange={(checked: boolean) => handleTogglePrivacy("shareDataWithDoctor", checked)}
+                                disabled={!!savingPrivacy["privacy.shareDataWithDoctor"]}
                             />
                         </div>
                         <Separator />
@@ -512,7 +663,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={privacy.anonymousAnalytics}
-                                onCheckedChange={(checked) => setPrivacy({ ...privacy, anonymousAnalytics: checked })}
+                                onCheckedChange={(checked: boolean) => handleTogglePrivacy("anonymousAnalytics", checked)}
+                                disabled={!!savingPrivacy["privacy.anonymousAnalytics"]}
                             />
                         </div>
                         <Separator />
@@ -523,7 +675,8 @@ export function Settings() {
                             </div>
                             <Switch
                                 checked={privacy.dataExport}
-                                onCheckedChange={(checked) => setPrivacy({ ...privacy, dataExport: checked })}
+                                onCheckedChange={(checked: boolean) => handleTogglePrivacy("dataExport", checked)}
+                                disabled={!!savingPrivacy["privacy.dataExport"]}
                             />
                         </div>
                     </div>
@@ -555,5 +708,5 @@ export function Settings() {
                 </CardContent>
             </Card>
         </div>
-    )
+    );
 }

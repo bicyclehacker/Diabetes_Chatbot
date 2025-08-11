@@ -91,32 +91,28 @@ exports.getUser = async (req, res) => {
 //     }
 // };
 
+// controllers/authController.js (or whichever file has updateUser)
 exports.updateUser = async (req, res) => {
     try {
         const updates = req.body || {};
         const userId = req.user.id;
 
-        // Whitelist fields that are allowed to be updated
+        // allowed top-level fields to be updated
         const allowed = [
-            'name', 'email', 'phone', 'dateOfBirth', 'diabetesType', 'diagnosisDate', 'emergencyContact',
-            'preferences', 'notifications', 'privacy'
+            'name', 'email', 'phone', 'dateOfBirth', 'diabetesType', 'diagnosisDate',
+            'emergencyContact', 'preferences', 'notifications', 'privacy'
         ];
 
-        // Build $set object: allow nested updates if client sends dot-notation or full nested object
+        // Build $set object for mongoose
         const setObj = {};
         for (const key of Object.keys(updates)) {
-            if (allowed.includes(key)) {
+            if (allowed.includes(key) || key.includes('.')) {
                 setObj[key] = updates[key];
-            } else {
-                // If client sent nested dot keys like 'notifications.emailNotifications', allow them too
-                if (key.includes('.')) {
-                    setObj[key] = updates[key];
-                }
             }
         }
 
         if (Object.keys(setObj).length === 0) {
-            return res.status(400).json({ msg: 'No valid fields to update' });
+            return res.status(400).json({ message: 'No valid fields to update' });
         }
 
         const updatedUser = await User.findByIdAndUpdate(
@@ -126,9 +122,9 @@ exports.updateUser = async (req, res) => {
         ).select('-password');
 
         res.status(200).json(updatedUser);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ msg: 'Failed to update user', error: error.message });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Failed to update user', error: err.message });
     }
 };
 
