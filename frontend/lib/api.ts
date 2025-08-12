@@ -28,7 +28,7 @@ export const fetchWithAuth = async (
         let errorMessage = 'API request failed';
         try {
             const errorData = await response.json();
-            // console.error('Server Error Response: ', errorData);
+            console.error('Server Error Response: ', errorData);
             errorMessage = errorData.message || errorMessage;
         } catch (err) {
             // Fallback if response is not JSON
@@ -192,7 +192,57 @@ export const api = {
         }),
 
     // Reminders
-    getReminders: () => fetchWithAuth('/reminders'),
+    getReminders: () => fetchWithAuth('/reminders/'),
+
+    addReminder: (data: {
+        title: string;
+        type:
+            | 'Medication'
+            | 'Glucose Check'
+            | 'Meal'
+            | 'Appointment'
+            | 'Custom';
+        time: string; // e.g., "09:00 AM"
+        frequency: 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
+        days?: string[]; // For custom schedules
+        enabled?: boolean; // default true
+        description?: string;
+        nextDue?: string | Date; // <-- change here to allow Date or ISO string
+    }) =>
+        fetchWithAuth('/reminders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    updateReminder: (
+        id: string,
+        data: {
+            title?: string;
+            type?:
+                | 'Medication'
+                | 'Glucose Check'
+                | 'Meal'
+                | 'Appointment'
+                | 'Custom';
+            time?: string;
+            frequency?: 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
+            days?: string[];
+            enabled?: boolean;
+            description?: string;
+            nextDue?: string | Date; // <-- here as well
+        }
+    ) =>
+        fetchWithAuth(`/reminders/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    deleteReminder: (id: string) =>
+        fetchWithAuth(`/reminders/${id}`, {
+            method: 'DELETE',
+        }),
 
     // Chats
     getChats: () => fetchWithAuth('/chats'),

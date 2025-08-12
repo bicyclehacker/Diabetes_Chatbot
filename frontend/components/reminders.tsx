@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,97 +11,124 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Bell, Clock, Pill, Activity, Apple, Calendar, Trash2, Edit } from "lucide-react"
 
+import { api } from "@/lib/api"
+
+type ReminderType = "Medication" | "Glucose Check" | "Meal" | "Appointment" | "Custom";
+type FrequencyType = "Daily" | "Weekly" | "Monthly" | "Custom";
+
 interface Reminder {
-  id: string
-  title: string
-  type: "medication" | "glucose" | "meal" | "appointment" | "custom"
-  time: string
-  frequency: "daily" | "weekly" | "monthly" | "custom"
-  days?: string[]
-  enabled: boolean
-  description?: string
-  nextDue: string
+  _id: string;
+  title: string;
+  type: ReminderType;
+  time: string;
+  frequency: FrequencyType;
+  days?: string[];
+  enabled: boolean;
+  description?: string;
+  nextDue?: string;
 }
 
+
 export function Reminders() {
-  const [reminders, setReminders] = useState<Reminder[]>([
-    {
-      id: "1",
-      title: "Take Metformin",
-      type: "medication",
-      time: "08:00",
-      frequency: "daily",
-      enabled: true,
-      description: "Take with breakfast",
-      nextDue: "Tomorrow at 8:00 AM",
-    },
-    {
-      id: "2",
-      title: "Check Blood Glucose",
-      type: "glucose",
-      time: "07:30",
-      frequency: "daily",
-      enabled: true,
-      nextDue: "Tomorrow at 7:30 AM",
-    },
-    {
-      id: "3",
-      title: "Doctor Appointment",
-      type: "appointment",
-      time: "14:00",
-      frequency: "monthly",
-      enabled: true,
-      description: "Monthly checkup with Dr. Smith",
-      nextDue: "Jan 15 at 2:00 PM",
-    },
-    {
-      id: "4",
-      title: "Evening Insulin",
-      type: "medication",
-      time: "22:00",
-      frequency: "daily",
-      enabled: false,
-      nextDue: "Tomorrow at 10:00 PM",
-    },
-  ])
-
-  const [newReminder, setNewReminder] = useState({
-    title: "",
-    type: "",
-    time: "",
-    frequency: "daily",
-    description: "",
-  })
-
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false)
 
-  const handleAddReminder = () => {
-    if (newReminder.title && newReminder.type && newReminder.time) {
-      const reminder: Reminder = {
-        id: Date.now().toString(),
+const [newReminder, setNewReminder] = useState<{
+    title: string;
+    type: ReminderType;
+    time: string;
+    frequency: FrequencyType;
+    days: string[];
+    enabled: boolean;
+    description: string;
+    nextDue: string;
+  }>({
+    title: "",
+    type: "Medication", // default valid value
+    time: "",
+    frequency: "Daily",
+    days: [],
+    enabled: true,
+    description: "",
+    nextDue: "",
+  });
+
+  useEffect(() => {
+    api.getReminders()
+      .then(data => setReminders(data))
+      .catch(err => console.error("Failed to load reminders:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+function timeToNextDueISO(timeStr: string): string {
+  const [hour, minute] = timeStr.split(':').map(Number);
+  const now = new Date();
+  const due = new Date(now);
+
+  due.setHours(hour, minute, 0, 0);
+
+  // If the time has already passed today, set to tomorrow
+  if (due <= now) {
+    due.setDate(due.getDate() + 1);
+  }
+
+  return due.toISOString();
+}
+
+
+  const handleAddReminder = async () => {
+    if (!newReminder.title || !newReminder.type || !newReminder.time) return;
+
+    try {
+      const created = await api.addReminder({
         title: newReminder.title,
-        type: newReminder.type as Reminder["type"],
+        type: newReminder.type,
         time: newReminder.time,
-        frequency: newReminder.frequency as Reminder["frequency"],
-        enabled: true,
+        frequency: newReminder.frequency,
         description: newReminder.description,
-        nextDue: "Tomorrow at " + newReminder.time,
-      }
-      setReminders([...reminders, reminder])
-      setNewReminder({ title: "", type: "", time: "", frequency: "daily", description: "" })
-      setShowAddForm(false)
+        enabled: newReminder.enabled,
+        nextDue: timeToNextDueISO(newReminder.time),
+      });
+      setReminders(prev => [created, ...prev]);
+
+      setNewReminder({
+        title: '',
+        type: 'Medication',
+        time: '',
+        frequency: 'Daily',
+        days: [],
+        enabled: true,
+        description: '',
+        nextDue: '',
+      });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to add reminder:', error);
     }
-  }
+  };
 
-  const toggleReminder = (id: string) => {
-    setReminders(
-      reminders.map((reminder) => (reminder.id === id ? { ...reminder, enabled: !reminder.enabled } : reminder)),
-    )
-  }
+  // Updated toggleReminder to call backend and update state
+  const toggleReminder = async (id: string, currentEnabled: boolean) => {
+    try {
+      const updated = await api.updateReminder(id, {
+        enabled: !currentEnabled,
+        nextDue: !currentEnabled ? new Date().toISOString() : undefined,
+      });
+      setReminders(reminders.map(r => (r._id === id ? updated : r)));
+    } catch (error) {
+      console.error("Failed to toggle reminder:", error);
+    }
+  };
 
-  const deleteReminder = (id: string) => {
-    setReminders(reminders.filter((reminder) => reminder.id !== id))
-  }
+  const deleteReminder = async (id: string) => {
+    try {
+      await api.deleteReminder(id);
+      setReminders(reminders.filter(r => r._id !== id));
+    } catch (error) {
+      console.error("Failed to delete reminder:", error);
+    }
+  };
 
   const getReminderIcon = (type: string) => {
     const icons = {
@@ -216,17 +243,17 @@ export function Reminders() {
                   </Label>
                   <Select
                     value={newReminder.type}
-                    onValueChange={(value) => setNewReminder({ ...newReminder, type: value })}
+                    onValueChange={(value) => setNewReminder({ ...newReminder, type: value as ReminderType })}
                   >
                     <SelectTrigger className="h-9 sm:h-10">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="medication">Medication</SelectItem>
-                      <SelectItem value="glucose">Glucose Check</SelectItem>
-                      <SelectItem value="meal">Meal</SelectItem>
-                      <SelectItem value="appointment">Appointment</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="Medication">Medication</SelectItem>
+                      <SelectItem value="Glucose Check">Glucose Check</SelectItem>
+                      <SelectItem value="Meal">Meal</SelectItem>
+                      <SelectItem value="Appointment">Appointment</SelectItem>
+                      <SelectItem value="Custom">Custom</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -248,16 +275,16 @@ export function Reminders() {
                   </Label>
                   <Select
                     value={newReminder.frequency}
-                    onValueChange={(value) => setNewReminder({ ...newReminder, frequency: value })}
+                    onValueChange={(value) => setNewReminder({ ...newReminder, frequency: value as FrequencyType })}
                   >
                     <SelectTrigger className="h-9 sm:h-10">
                       <SelectValue placeholder="Select frequency" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="Daily">Daily</SelectItem>
+                      <SelectItem value="Weekly">Weekly</SelectItem>
+                      <SelectItem value="Monthly">Monthly</SelectItem>
+                      <SelectItem value="Custom">Custom</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -293,12 +320,15 @@ export function Reminders() {
           <div className="space-y-3">
             {reminders.map((reminder) => (
               <div
-                key={reminder.id}
+                key={reminder._id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg bg-white space-y-3 sm:space-y-0"
               >
                 <div className="flex items-start space-x-3 min-w-0 flex-1">
                   <div className="flex items-center space-x-2 shrink-0">
-                    <Switch checked={reminder.enabled} onCheckedChange={() => toggleReminder(reminder.id)} />
+                        <Switch 
+                          checked={reminder.enabled} 
+                          onCheckedChange={() => toggleReminder(reminder._id, reminder.enabled)} 
+                        />
                     {getReminderIcon(reminder.type)}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -323,7 +353,7 @@ export function Reminders() {
                     size="sm"
                     variant="ghost"
                     className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                    onClick={() => deleteReminder(reminder.id)}
+                    onClick={() => deleteReminder(reminder._id)}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>

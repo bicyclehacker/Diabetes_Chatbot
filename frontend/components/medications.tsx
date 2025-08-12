@@ -25,7 +25,6 @@ export interface Medication {
 }
 
 
-
 export function Medications() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true)

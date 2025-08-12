@@ -15,6 +15,9 @@ const reminderSchema = new mongoose.Schema({
         required: true,
     },
     description: { type: String },
+
+    enabled: { type: Boolean, default: true },
+    nextDue: { type: Date },
     createdAt: { type: Date, default: Date.now },
 });
 
