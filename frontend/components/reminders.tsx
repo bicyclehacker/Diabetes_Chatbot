@@ -355,9 +355,9 @@ function formatTimeWithAmPm(time24: string) {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 self-end sm:self-center">
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                  {/* <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                     <Edit className="h-3 w-3" />
-                  </Button>
+                  </Button> */}
                   <Button
                     size="sm"
                     variant="ghost"
