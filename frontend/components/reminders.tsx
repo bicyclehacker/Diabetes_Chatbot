@@ -34,6 +34,7 @@ export function Reminders() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false)
 
+
 const [newReminder, setNewReminder] = useState<{
     title: string;
     type: ReminderType;
@@ -76,6 +77,14 @@ function timeToNextDueISO(timeStr: string): string {
   return due.toISOString();
 }
 
+
+function formatTimeWithAmPm(time24: string) {
+  const [hourStr, minute] = time24.split(':');
+  let hour = parseInt(hourStr, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12 || 12; // convert 0 to 12 for 12 AM
+  return `${hour}:${minute} ${ampm}`;
+}
 
   const handleAddReminder = async () => {
     if (!newReminder.title || !newReminder.type || !newReminder.time) return;
@@ -342,7 +351,7 @@ function timeToNextDueISO(timeStr: string): string {
                       {reminder.time} • {getFrequencyLabel(reminder.frequency)}
                     </p>
                     {reminder.description && <p className="text-xs text-gray-600 mt-1">{reminder.description}</p>}
-                    <p className="text-xs text-blue-600 mt-1">Next: {reminder.nextDue}</p>
+                    <p className="text-xs text-blue-600 mt-1">Next: {reminder.nextDue ? formatTimeWithAmPm(reminder.nextDue) : 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 self-end sm:self-center">
