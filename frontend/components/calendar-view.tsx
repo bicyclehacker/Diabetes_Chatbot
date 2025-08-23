@@ -117,13 +117,25 @@ export function CalendarView() {
 
   // 🔹 Add event (backend + frontend state)
 const addEvent = async () => {
-  if (!newEvent.title) return;
+  if (!newEvent.title || !newEvent.date || !newEvent.time) {
+    alert("Please provide a title, date, and time.");
+    return;
+  }
 
   try {
+
+    const datePart = newEvent.date;
+    const timePart = newEvent.time;
+
+    const [hours, minutes] = timePart.split(':').map(Number);
+
+    const  combinedDate = new Date(datePart);
+    combinedDate.setHours(hours, minutes, 0, 0); // Set H, M, S, MS
+
     const saved = await api.addReminder({
       title: newEvent.title!,
       description: newEvent.description,
-      date: newEvent.date!,
+      date: combinedDate,
       time: newEvent.time,
       type: newEvent.type || "reminder",
       frequency: newEvent.frequency || "once",
@@ -168,13 +180,22 @@ const addEvent = async () => {
 
   // 🔹 Update event
   const updateEvent = async () => {
-    if (!editingEvent) return
+    if (!editingEvent || !editingEvent.date || !editingEvent.time) return
+
+    const datePart = editingEvent.date;
+    const timePart = editingEvent.time;
+
+    const [hours, minutes] = timePart.split(':').map(Number);
+
+    const  combinedDate = new Date(datePart);
+    combinedDate.setHours(hours, minutes, 0, 0); // Set H, M, S, MS
+    
 
     try {
       await api.updateReminder(editingEvent.id, {
         title: editingEvent.title,
         description: editingEvent.description,
-        date: editingEvent.date,
+        date: combinedDate,
         time: editingEvent.time,
         type: editingEvent.type,
         frequency: editingEvent.frequency,
@@ -182,7 +203,15 @@ const addEvent = async () => {
         isTask: editingEvent.isTask,
         completed: editingEvent.completed,
         value: editingEvent.value,
+        enabled: true,
       })
+
+       // Update the local state
+    const updatedEventInState = {
+        ...editingEvent,
+        date: combinedDate,
+        enabled: true, // Also update it in the local state
+    };
 
       setEvents(events.map((event) => (event.id === editingEvent.id ? editingEvent : event)))
       setEditingEvent(null)
@@ -449,68 +478,82 @@ const addEvent = async () => {
               </DialogContent>
             </Dialog>
           </CardHeader>
-          <CardContent>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-           onSelect={(date) => {
-               if (date && (!selectedDate || !isSameDay(selectedDate, date))) {
-                setSelectedDate(date)
-                }
-            }}
-
-            className="rounded-md border"
-            components={{
-              DayContent: ({ date }) => {
-                const dayEvents = getEventsForDate(date)
-                const isSelected = selectedDate && isSameDay(date, selectedDate)
-
-                return (
-                  <div
-                    className={`relative w-full h-20 p-1 ${
-                      isSelected ? "ring-2 ring-blue-500 ring-offset-1 rounded-md" : ""
-                    }`}
-                  >
-                    <div className="text-sm font-medium mb-1">{format(date, "d")}</div>
-                    <ScrollArea className="h-12">
-                      <div className="space-y-1">
-                        {dayEvents.slice(0, 3).map((event) => (
-                          <div
-                            key={event.id}
-                            className={`text-xs p-1 rounded border ${getEventColor(event.type)} flex items-center gap-1`}
-                          >
-                            {event.isTask && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleTaskCompletion(event.id)
-                                }}
-                                className="flex-shrink-0"
+          
+            <CardContent>
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date && (!selectedDate || !isSameDay(selectedDate, date))) {
+                    setSelectedDate(date);
+                  }
+                }}
+                showOutsideDays={false}
+                className="rounded-md border p-3"
+                classNames={{
+                  day: "h-24 w-full p-1 text-left align-top",
+                  day_selected:
+                    "bg-primary text-primary-foreground rounded-md hover:bg-primary            hover:text-primary-foreground focus:bg-primary         focus:text-primary-foreground",
+                  day_today: "bg-accent rounded-md",
+                }}
+                components={{
+                  DayContent: ({ date }) => {
+                    const dayEvents = getEventsForDate(date);
+                
+                    return (
+                      // Use a React Fragment to avoid adding extra styling
+                      <>
+                        <div className="text-sm font-medium mb-1">{format(date,            "d")}</div>
+                        <ScrollArea className="h-16">
+                          <div className="space-y-1">
+                            {dayEvents.slice(0, 3).map((event) => (
+                              <div
+                                key={event.id}
+                                className={`text-xs p-1 rounded border $           {getEventColor(
+                                  event.type
+                                )} flex items-center gap-1`}
                               >
-                                {event.completed ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                ) : (
-                                  <Circle className="h-3 w-3" />
+                                {event.isTask && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleTaskCompletion(event.id);
+                                    }}
+                                    className="flex-shrink-0"
+                                  >
+                                    {event.completed ? (
+                                      <CheckCircle2 className="h-3 w-3         text-green-600" />
+                                    ) : (
+                                      <Circle className="h-3 w-3" />
+                                    )}
+                                  </button>
                                 )}
-                              </button>
+                                {getEventIcon(event.type)}
+                                <span
+                                  className={`truncate ${
+                                    event.completed ? "line-through text-gray-500"         : ""
+                                  }`}
+                                >
+                                  {event.title}
+                                </span>
+                                {event.emailReminder && <Mail className="h-2 w-2           ml-auto" />}
+                                {event.frequency !== "once" && <Repeat         className="h-2 w-2 ml-auto" />}
+                              </div>
+                            ))}
+                            {dayEvents.length > 3 && (
+                              <div className="text-xs text-gray-500 text-center">
+                                +{dayEvents.length - 3} more
+                              </div>
                             )}
-                            {getEventIcon(event.type)}
-                            <span className={`truncate ${event.completed ? "line-through" : ""}`}>{event.title}</span>
-                            {event.emailReminder && <Mail className="h-2 w-2" />}
-                            {event.frequency !== "once" && <Repeat className="h-2 w-2" />}
                           </div>
-                        ))}
-                        {dayEvents.length > 3 && (
-                          <div className="text-xs text-gray-500 text-center">+{dayEvents.length - 3} more</div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                )
-              },
-            }}
-          />
-        </CardContent>
+                        </ScrollArea>
+                      </>
+                    );
+                  },
+                }}
+              />
+            </CardContent>
+
         </Card>
 
         {/* Events for Selected Date & Upcoming Events */}

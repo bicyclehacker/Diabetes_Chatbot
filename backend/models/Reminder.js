@@ -29,7 +29,7 @@ const reminderSchema = new mongoose.Schema({
     // Flags
     isTask: { type: Boolean, default: false },
     completed: { type: Boolean, default: false },
-    emailReminder: { type: Boolean, default: false },
+    emailReminder: { type: Boolean, default: true },
     enabled: { type: Boolean, default: true },
 
     // Extra fields

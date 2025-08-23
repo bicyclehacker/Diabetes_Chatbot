@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema(
             glucoseAlerts: { type: Boolean, default: true },
             appointmentReminders: { type: Boolean, default: true },
             pushNotifications: { type: Boolean, default: true },
-            emailNotifications: { type: Boolean, default: false },
+            emailNotifications: { type: Boolean, default: true },
         },
 
         privacy: {
