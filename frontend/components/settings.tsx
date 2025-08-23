@@ -477,7 +477,6 @@ export function Settings() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="mg-dl">mg/dL</SelectItem>
-                                    <SelectItem value="mmol-l">mmol/L</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -496,7 +495,6 @@ export function Settings() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="12-hour">12 Hour</SelectItem>
-                                    <SelectItem value="24-hour">24 Hour</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -515,13 +513,10 @@ export function Settings() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="en">English</SelectItem>
-                                    <SelectItem value="es">Spanish</SelectItem>
-                                    <SelectItem value="fr">French</SelectItem>
-                                    <SelectItem value="de">German</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
+                        {/* <div className="space-y-2">
                             <Label htmlFor="theme" className="text-sm">
                                 Theme
                             </Label>
@@ -550,7 +545,7 @@ export function Settings() {
                                     <SelectItem value="system">System</SelectItem>
                                 </SelectContent>
                             </Select>
-                        </div>
+                        </div> */}
                     </div>
                     <Button onClick={handleSavePreferences} className="w-full sm:w-auto" size="sm">
                         <Save className="h-4 w-4 mr-2" />
@@ -606,7 +601,7 @@ export function Settings() {
                             />
                         </div>
                         <Separator />
-                        <div className="flex items-center justify-between">
+                        {/* <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-medium">Push Notifications</Label>
                                 <p className="text-xs text-gray-500">Receive notifications on your device</p>
@@ -616,8 +611,8 @@ export function Settings() {
                                 onCheckedChange={(checked: boolean) => handleToggleNotification("pushNotifications", checked)}
                                 disabled={!!savingNotifications["notifications.pushNotifications"]}
                             />
-                        </div>
-                        <Separator />
+                        </div> */}
+                        {/* <Separator /> */}
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-medium">Email Notifications</Label>
@@ -644,7 +639,7 @@ export function Settings() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                        {/* <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-medium">Share Data with Doctor</Label>
                                 <p className="text-xs text-gray-500">Allow your healthcare provider to access your data</p>
@@ -655,8 +650,8 @@ export function Settings() {
                                 disabled={!!savingPrivacy["privacy.shareDataWithDoctor"]}
                             />
                         </div>
-                        <Separator />
-                        <div className="flex items-center justify-between">
+                        <Separator /> */}
+                        {/* <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-medium">Anonymous Analytics</Label>
                                 <p className="text-xs text-gray-500">Help improve the app with anonymous usage data</p>
@@ -667,7 +662,7 @@ export function Settings() {
                                 disabled={!!savingPrivacy["privacy.anonymousAnalytics"]}
                             />
                         </div>
-                        <Separator />
+                        <Separator /> */}
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-medium">Data Export</Label>

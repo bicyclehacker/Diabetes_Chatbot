@@ -118,7 +118,7 @@ export function GlucoseLog() {
             </div>
             <p className="text-xs text-gray-600">
               {readings.length > 0
-                ? `${readings[0].recordedAt} - ${getTypeLabel(readings[0].readingType)}`
+                ? `${new Date(readings[0].recordedAt).toLocaleString()} - ${getTypeLabel(readings[0].readingType)}`
                 : "Add your first reading"}
             </p>
           </CardContent>

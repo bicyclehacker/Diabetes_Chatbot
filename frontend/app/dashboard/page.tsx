@@ -57,6 +57,10 @@ import { Reports } from "@/components/reports"
 import { Reminders } from "@/components/reminders"
 import { Settings as SettingsComponent } from "@/components/settings"
 
+import { api } from "@/lib/api"
+import { format } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
 export default function Dashboard() {
     const router = useRouter()
     const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
@@ -140,6 +144,7 @@ export default function Dashboard() {
             setOpenMobile(false)
         }
 
+
         return (
             <Sidebar variant="inset">
                 <SidebarHeader>
@@ -218,6 +223,70 @@ export default function Dashboard() {
     }
 
     const renderContent = () => {
+
+        const [GlucoseReading, setGlucoseReading] = useState<any[]>([]);
+
+
+        useEffect(() => {
+            api.getGlucoseReadings()
+              .then(data => {
+                // store whatever you get into readings state
+                setGlucoseReading(data || [])
+              })
+              .catch(err => console.error("Failed to load readings:", err))
+          }, [])
+
+            const weeklyAverageReading =
+                GlucoseReading.length > 0
+                    ? Math.round(
+                        GlucoseReading.reduce((sum, reading) => sum + reading.level, 0) /
+                        GlucoseReading.length
+                      )
+                    : null;
+
+                const lastWeekReadings = GlucoseReading.filter(reading => {
+                  const readingDate = new Date(reading.createdAt);
+                  const today = new Date();
+                  const lastWeekStart = new Date(today.setDate(today.getDate() - 7));
+                  return readingDate >= lastWeekStart;
+                });
+
+                const lastWeekAverage =
+                  lastWeekReadings.length > 0
+                    ? Math.round(
+                        lastWeekReadings.reduce((sum, r) => sum + r.level, 0) /
+                          lastWeekReadings.length
+                      )
+                    : null;
+                  
+                // ✅ Calculate percentage difference
+                const percentageChange =
+                  weeklyAverageReading && lastWeekAverage
+                    ? Math.round(
+                        ((weeklyAverageReading - lastWeekAverage) / lastWeekAverage) * 100
+                      )
+                    : null;
+
+                //Medication
+                const [medications, setMedications] = useState([]);
+
+                useEffect(() => {
+                  const fetchMedications = async () => {
+                    try {
+                      const data = await api.getMedications();
+                      setMedications(data);
+                    } catch (error) {
+                      console.error("Failed to fetch medications:", error);
+                    }
+                  };
+              
+                  fetchMedications();
+                }, []);
+
+                const takenToday = medications.filter((med) => med.taken).length
+                const totalMedications = medications.length
+                const adherenceRate = totalMedications > 0 ? Math.round((takenToday / totalMedications) * 100) : 0
+
         switch (activeView) {
             case "overview":
                 return (
@@ -230,8 +299,21 @@ export default function Dashboard() {
                                     <Activity className="h-4 w-4 text-green-500" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-green-600">128 mg/dL</div>
-                                    <p className="text-xs text-gray-600">Normal range</p>
+                                    <div className="text-xl sm:text-2xl font-bold text-green-600">
+                                        {GlucoseReading.length > 0 ? `${GlucoseReading[0].level} mg/dL` : "No data"}
+                                    </div>
+
+                                    <p className="text-xs text-gray-600">
+                                        {GlucoseReading.length === 0
+                                            ? "No data available"
+                                            : GlucoseReading[0].level < 70
+                                            ? "Low"
+                                            : GlucoseReading[0].level <= 140
+                                            ? "Normal range"
+                                            : "High"
+                                        }
+                                    </p>
+                                    
                                 </CardContent>
                             </Card>
 
@@ -241,21 +323,36 @@ export default function Dashboard() {
                                     <TrendingUp className="h-4 w-4 text-blue-500" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-blue-600">142 mg/dL</div>
-                                    <p className="text-xs text-gray-600">↓ 8% from last week</p>
+                                    <div className="text-xl sm:text-2xl font-bold text-blue-600"> {weeklyAverageReading !== null ? `${weeklyAverageReading} mg/dL` : "No Data"}</div>
+                                {percentageChange !== null ? (
+                                      <p
+                                        className={`text-xs ${
+                                          percentageChange < 0 ? "text-red-600" : "text-green-600"
+                                        }`}
+                                      >
+                                        {percentageChange > 0
+                                          ? `↑ ${percentageChange}% from last week`
+                                          : `↓ ${Math.abs(percentageChange)}% from last week`}
+                                      </p>
+                                    ) : (
+                                      <p className="text-xs text-gray-600">No previous data to compare</p>
+                                    )}
                                 </CardContent>
                             </Card>
 
                             <Card className="border-0 shadow-lg">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Medications</CardTitle>
-                                    <Pill className="h-4 w-4 text-purple-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-purple-600">95%</div>
-                                    <p className="text-xs text-gray-600">Adherence rate</p>
-                                </CardContent>
+                              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Medications</CardTitle>
+                                <Pill className="h-4 w-4 text-purple-500" />
+                              </CardHeader>
+                              <CardContent>
+                                <div className="text-xl sm:text-2xl font-bold text-purple-600">
+                                  {medications.length > 0 ? `${adherenceRate}%` : "No Data"}
+                                </div>
+                                <p className="text-xs text-gray-600">Adherence rate</p>
+                              </CardContent>
                             </Card>
+
 
                             <Card className="border-0 shadow-lg">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
