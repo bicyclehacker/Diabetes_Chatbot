@@ -18,7 +18,7 @@ connectDB();
 const app = express();
 app.use(
     cors({
-        origin: 'http://localhost:3000', // allow only your frontend
+        origin: '*', // allow only your frontend
         credentials: true, // allow cookies if needed later
     })
 );
@@ -36,6 +36,11 @@ app.use('/api/meals', mealRoutes);
 app.use('/api/medications', medicationRoutes);
 app.use('/api/glucose', glucoseRoutes);
 
+
+// // Run the reminder job every minute
+// cron.schedule('* * * * *', () => {
+//     sendDueReminders().catch(console.error);
+// });
 
 
 const PORT = process.env.PORT || 5000;

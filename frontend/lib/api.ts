@@ -191,23 +191,28 @@ export const api = {
             method: 'DELETE',
         }),
 
-    // Reminders
+    // Reminders (Calendar Events)
     getReminders: () => fetchWithAuth('/reminders/'),
 
     addReminder: (data: {
         title: string;
-        type:
-            | 'Medication'
-            | 'Glucose Check'
-            | 'Meal'
-            | 'Appointment'
-            | 'Custom';
-        time: string; // e.g., "09:00 AM"
-        frequency: 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
-        days?: string[]; // For custom schedules
-        enabled?: boolean; // default true
         description?: string;
-        nextDue?: string | Date; // <-- change here to allow Date or ISO string
+        date: string | Date; // full date (with time)
+        time?: string;
+        type?:
+            | 'medication'
+            | 'glucose'
+            | 'meal'
+            | 'appointment'
+            | 'task'
+            | 'reminder';
+        frequency?: 'once' | 'daily' | 'weekly' | 'monthly';
+        emailReminder?: boolean;
+        isTask?: boolean;
+        completed?: boolean;
+        value?: string;
+        enabled?: boolean;
+        nextDue?: string | Date;
     }) =>
         fetchWithAuth('/reminders', {
             method: 'POST',
@@ -219,18 +224,23 @@ export const api = {
         id: string,
         data: {
             title?: string;
-            type?:
-                | 'Medication'
-                | 'Glucose Check'
-                | 'Meal'
-                | 'Appointment'
-                | 'Custom';
-            time?: string;
-            frequency?: 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
-            days?: string[];
-            enabled?: boolean;
             description?: string;
-            nextDue?: string | Date; // <-- here as well
+            date?: string | Date;
+            time?: string;
+            type?:
+                | 'medication'
+                | 'glucose'
+                | 'meal'
+                | 'appointment'
+                | 'task'
+                | 'reminder';
+            frequency?: 'once' | 'daily' | 'weekly' | 'monthly';
+            emailReminder?: boolean;
+            isTask?: boolean;
+            completed?: boolean;
+            value?: string;
+            enabled?: boolean;
+            nextDue?: string | Date;
         }
     ) =>
         fetchWithAuth(`/reminders/${id}`, {
