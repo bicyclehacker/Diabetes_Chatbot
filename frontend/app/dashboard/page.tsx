@@ -83,7 +83,7 @@ export default function Dashboard() {
             items: [
                 { title: "Calendar", icon: Calendar, id: "calendar" },
                 { title: "Reports", icon: FileText, id: "reports" },
-                { title: "Reminders", icon: Bell, id: "reminders" },
+                // { title: "Reminders", icon: Bell, id: "reminders" },
                 { title: "Settings", icon: Settings, id: "settings" },
             ],
         },
