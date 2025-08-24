@@ -90,6 +90,25 @@ export const api = {
             body: JSON.stringify({ email, password }),
         }),
 
+    // Forgot Password APIs (no token needed)
+    forgotPassword: ({ email }: { email: string }) =>
+        fetchWithAuth('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        }),
+
+    verifyOtp: ({ email, otp }: { email: string; otp: string }) =>
+        fetchWithAuth('/auth/verify-otp', {
+            method: 'POST',
+            body: JSON.stringify({ email, otp }),
+        }),
+
+    resetPassword: ({ token, password }: { token: string; password: string }) =>
+        fetchWithAuth('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ token, password }),
+        }),
+
     // Get User
     getUser: () => fetchWithAuth('/auth/me'),
 

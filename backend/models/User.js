@@ -45,6 +45,9 @@ const userSchema = new mongoose.Schema(
             anonymousAnalytics: { type: Boolean, default: false },
             dataExport: { type: Boolean, default: true },
         },
+        // NEW: Fields for OTP reset
+        resetOtp: { type: String, select: false }, // Hashed OTP, not selected by default for security
+        resetOtpExpiry: { type: Date, select: false },
     },
     { timestamps: true }
 );
