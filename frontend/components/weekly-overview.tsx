@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
 
+import { api } from "@/lib/api"
+import { useEffect, useState } from "react"
+
 const weeklyData = [
   { day: "Mon", avgGlucose: 142, exercise: 45 },
   { day: "Tue", avgGlucose: 138, exercise: 30 },
@@ -26,6 +29,41 @@ const chartConfig = {
 }
 
 export function WeeklyOverview() {
+const [weeklyData, setWeeklyData] = useState([]);
+
+  useEffect(() => {
+    const fetchWeeklyGlucose = async () => {
+      try {
+        const data = await api.getGlucoseReadings(); // Fetch glucose readings from backend
+
+        // Group readings by weekday & calculate average glucose per day
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const grouped = {};
+
+        data.forEach((reading) => {
+          const day = days[new Date(reading.recordedAt).getDay()];
+          if (!grouped[day]) {
+            grouped[day] = { total: 0, count: 0 };
+          }
+          grouped[day].total += reading.level;
+          grouped[day].count += 1;
+        });
+
+        // Format final weekly data
+        const formatted = days.map((day) => ({
+          day,
+          avgGlucose: grouped[day] ? Math.round(grouped[day].total / grouped[day].count) : 0,
+        }));
+
+        setWeeklyData(formatted);
+      } catch (error) {
+        console.error("Error fetching glucose data:", error);
+      }
+    };
+
+    fetchWeeklyGlucose();
+  }, []);
+    
   return (
     <Card className="border-0 shadow-lg">
       <CardHeader className="pb-2 sm:pb-4">
