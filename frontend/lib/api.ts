@@ -7,44 +7,72 @@ export const fetchWithAuth = async (
     options?: RequestInit
 ) => {
     const token = localStorage.getItem('token');
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            ...options?.headers,
-        },
-    });
-
-    if (response.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/auth/signin';
-        throw new Error('Session expired');
-    }
-
-    if (!response.ok) {
-        let errorMessage = 'API request failed';
-        try {
-            const errorData = await response.json();
-            console.error('Server Error Response: ', errorData);
-            errorMessage = errorData.message || errorMessage;
-        } catch (err) {
-            // Fallback if response is not JSON
-            const text = await response.text();
-            if (text && text.length < 500) {
-                errorMessage = text;
-            }
-        }
-
-        throw new Error(errorMessage);
-    }
+    const url = `${API_BASE_URL}${endpoint}`;
 
     try {
-        return await response.json();
-    } catch {
-        return null; // In case response is empty (like DELETE)
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: token ? `Bearer ${token}` : '',
+                ...options?.headers,
+            },
+        });
+
+        // If unauthorized, logout & redirect
+        if (response.status === 401) {
+            console.warn('⚠️ Session expired. Redirecting to signin...');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/auth/signin';
+            throw new Error('Session expired. Please login again.');
+        }
+
+        // Handle non-OK responses
+        if (!response.ok) {
+            let errorText = await response.text();
+            let errorData;
+
+            // Try parsing JSON, fallback to raw text
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                errorData = {
+                    message: errorText || 'Unknown error from server',
+                };
+            }
+
+            console.group('🚨 API ERROR');
+            console.error('URL:', url);
+            console.error('Method:', options?.method || 'GET');
+            console.error('Status:', response.status);
+            console.error('Status Text:', response.statusText);
+            console.error('Error Response:', errorData);
+            console.error('Request Body:', options?.body || null);
+            console.groupEnd();
+
+            throw new Error(
+                errorData.message ||
+                    errorData.msg ||
+                    `Request failed with ${response.status}`
+            );
+        }
+
+        // Return parsed JSON or null if empty
+        try {
+            return await response.json();
+        } catch {
+            return null; // Useful for DELETE responses
+        }
+    } catch (error: any) {
+        console.group('🔥 NETWORK / FETCH ERROR');
+        console.error('URL:', url);
+        console.error('Method:', options?.method || 'GET');
+        console.error('Error Message:', error.message);
+        console.error('Full Error Object:', error);
+        console.groupEnd();
+
+        throw error;
     }
 };
 
@@ -254,21 +282,53 @@ export const api = {
             method: 'DELETE',
         }),
 
-    // Chats
+    //chats
     getChats: () => fetchWithAuth('/chats'),
+
     createChat: (title: string) =>
         fetchWithAuth('/chats', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title }),
+        }),
+
+    updateChat: (chatId: string, data: { title: string }) =>
+        fetchWithAuth(`/chats/${chatId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    deleteChat: (chatId: string) =>
+        fetchWithAuth(`/chats/${chatId}`, {
+            method: 'DELETE',
         }),
 
     // Messages
     getMessages: (chatId: string) =>
         fetchWithAuth(`/messages?chatId=${chatId}`),
+
     sendMessage: (chatId: string, content: string) =>
         fetchWithAuth('/messages', {
             method: 'POST',
-            body: JSON.stringify({ chatId, content, role: 'user' }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chatId,
+                content,
+                role: 'user', // user sends messages, bot handled separately
+            }),
+        }),
+
+    updateMessage: (messageId: string, data: { content: string }) =>
+        fetchWithAuth(`/messages/${messageId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    deleteMessage: (messageId: string) =>
+        fetchWithAuth(`/messages/${messageId}`, {
+            method: 'DELETE',
         }),
 };
 

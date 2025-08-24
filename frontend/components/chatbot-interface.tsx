@@ -24,11 +24,13 @@ import {
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
+import { api } from "@/lib/api"
+
 interface Message {
   id: string
-  role: "user" | "assistant"
+  role: "user" | "bot"
   content: string
-  timestamp: Date
+  timestamps: Date
 }
 
 interface ChatSession {
@@ -67,210 +69,311 @@ const quickSuggestions = [
 ]
 
 export function ChatbotInterface() {
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    {
-      id: "1",
-      title: "Diabetes Management Tips",
-      messages: [
-        {
-          id: "1",
-          role: "user",
-          content: "What are some good tips for managing diabetes?",
-          timestamp: new Date(Date.now() - 3600000),
-        },
-        {
-          id: "2",
-          role: "assistant",
-          content:
-            "Here are some essential diabetes management tips:\n\n1. **Monitor Blood Sugar Regularly**: Check your glucose levels as recommended by your healthcare provider\n2. **Follow a Balanced Diet**: Focus on whole grains, lean proteins, and vegetables\n3. **Stay Active**: Regular exercise helps control blood sugar levels\n4. **Take Medications as Prescribed**: Never skip doses without consulting your doctor\n5. **Stay Hydrated**: Drink plenty of water throughout the day\n\nWould you like me to elaborate on any of these points?",
-          timestamp: new Date(Date.now() - 3590000),
-        },
-      ],
-      createdAt: new Date(Date.now() - 86400000),
-      updatedAt: new Date(Date.now() - 3590000),
-    },
-    {
-      id: "2",
-      title: "Blood Sugar Monitoring",
-      messages: [
-        {
-          id: "3",
-          role: "user",
-          content: "How often should I check my blood sugar?",
-          timestamp: new Date(Date.now() - 172800000),
-        },
-      ],
-      createdAt: new Date(Date.now() - 172800000),
-      updatedAt: new Date(Date.now() - 172800000),
-    },
-  ])
 
-  const [currentSessionId, setCurrentSessionId] = useState<string>("1")
-  const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
-  const [renamingSessionId, setRenamingSessionId] = useState<string>("")
-  const [newTitle, setNewTitle] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
+const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+const [input, setInput] = useState("")
+const [isLoading, setIsLoading] = useState(false)
+const [sidebarOpen, setSidebarOpen] = useState(false)
+const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+const [renamingSessionId, setRenamingSessionId] = useState<string>("")
+const [newTitle, setNewTitle] = useState("")
+const [searchQuery, setSearchQuery] = useState("")
 
-  const currentSession = chatSessions.find((session) => session.id === currentSessionId)
-  const filteredSessions = chatSessions.filter((session) =>
-    session.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+const messagesEndRef = useRef<HTMLDivElement>(null)
+const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [currentSession?.messages])
+const currentSession = chatSessions.find((session) => session.id === currentSessionId)
+const filteredSessions = chatSessions.filter((session) =>
+  session.title.toLowerCase().includes(searchQuery.toLowerCase()),
+)
 
-  const createNewChat = () => {
-    const newSession: ChatSession = {
-      id: Date.now().toString(),
-      title: "New Chat",
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+useEffect(() => {
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+}, [currentSession?.messages])
+
+const selectChat = async (sessionId: string) => {
+  // Prevent re-fetching if the chat is already selected
+  if (currentSessionId === sessionId) return;
+
+  setCurrentSessionId(sessionId);
+  setSidebarOpen(false); // Close sidebar on mobile
+
+  // Find the chat in the current state
+  const chat = chatSessions.find((s) => s.id === sessionId);
+
+  // Only fetch messages if they haven't been loaded for this session yet
+  if (chat && chat.messages.length === 0) {
+    try {
+      setIsLoading(true);
+      const messagesData = await api.getMessages(sessionId);
+      
+      const loadedMessages = messagesData.map((msg: any) => ({
+        id: msg._id,
+        role: msg.role,
+        content: msg.content,
+        timestamps: new Date(msg.createdAt),
+      }));
+
+      // Update the state with the newly loaded messages
+      setChatSessions((prev) =>
+        prev.map((session) =>
+          session.id === sessionId
+            ? { ...session, messages: loadedMessages }
+            : session
+        )
+      );
+    } catch (error) {
+      console.error("Failed to load messages for chat:", sessionId, error);
+    } finally {
+      setIsLoading(false);
     }
+  }
+};
+
+// ✨ FIX: Add this useEffect to load chats when the component starts
+useEffect(() => {
+  const loadInitialData = async () => {
+    try {
+      setIsLoading(true);
+      const chatsData = await api.getChats();
+      
+      const sessions = chatsData.map((chat: any) => ({
+        id: chat._id,
+        title: chat.title,
+        messages: [], // Messages will be loaded when a chat is selected
+        createdAt: new Date(chat.createdAt),
+        updatedAt: new Date(chat.updatedAt),
+      }));
+
+      setChatSessions(sessions);
+
+      // Automatically select the most recent chat
+      if (sessions.length > 0) {
+        await selectChat(sessions[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to load initial chats:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  loadInitialData();
+}, []); // The empty array [] ensures this runs only once on mount
+
+
+// ✅ Correctly uses `api.createChat`
+const createNewChat = async () => {
+  try {
+    setIsLoading(true)
+    const data = await api.createChat("New Chat")
+
+    const newSession: ChatSession = {
+      id: data._id,
+      title: data.title,
+      messages: [],
+      createdAt: new Date(data.createdAt),
+      updatedAt: new Date(data.updatedAt),
+    }
+
     setChatSessions((prev) => [newSession, ...prev])
     setCurrentSessionId(newSession.id)
     setSidebarOpen(false)
+  } catch (error) {
+    console.error("Error creating new chat:", error)
+  } finally {
+    setIsLoading(false)
   }
+}
 
-  const deleteChat = (sessionId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setChatSessions((prev) => prev.filter((session) => session.id !== sessionId))
+// ✨ FIX: Integrated API call and robust state handling
+const deleteChat = async (sessionId: string, e: React.MouseEvent) => {
+  e.stopPropagation()
+  const originalSessions = chatSessions
+
+  // Optimistically update the UI for a faster user experience
+  setChatSessions((prev) => prev.filter((session) => session.id !== sessionId))
+
+  try {
+    // Call the backend API to permanently delete the chat
+    await api.deleteChat(sessionId)
+
+    // If the active chat was deleted, switch to another one
     if (currentSessionId === sessionId) {
-      const remaining = chatSessions.filter((session) => session.id !== sessionId)
+      const remaining = originalSessions.filter((session) => session.id !== sessionId)
       if (remaining.length > 0) {
         setCurrentSessionId(remaining[0].id)
       } else {
-        createNewChat()
+        createNewChat() // Create a new chat if it was the last one
       }
     }
+  } catch (error) {
+    console.error("Error deleting chat:", error)
+    // If the API call fails, revert the UI to its original state
+    setChatSessions(originalSessions)
+  }
+}
+
+// ✅ No changes needed, this function just prepares the dialog
+const openRenameDialog = (sessionId: string, e: React.MouseEvent) => {
+  e.stopPropagation()
+  const session = chatSessions.find((s) => s.id === sessionId)
+  if (session) {
+    setRenamingSessionId(sessionId)
+    setNewTitle(session.title)
+    setRenameDialogOpen(true)
+  }
+}
+
+// ✨ FIX: Integrated API call for renaming
+const handleRename = async () => {
+  if (!newTitle.trim() || !renamingSessionId) return
+
+  const originalSessions = chatSessions
+  const trimmedTitle = newTitle.trim()
+
+  // Optimistically update the UI
+  setChatSessions((prev) =>
+    prev.map((session) =>
+      session.id === renamingSessionId ? { ...session, title: trimmedTitle } : session,
+    ),
+  )
+  setRenameDialogOpen(false)
+
+  try {
+    // Call the backend API to save the new title
+    await api.updateChat(renamingSessionId, { title: trimmedTitle })
+  } catch (error) {
+    console.error("Error renaming chat:", error)
+    // If the API fails, revert the UI change
+    setChatSessions(originalSessions)
+    setRenameDialogOpen(true) // Optional: reopen dialog on failure
+  } finally {
+    setRenamingSessionId("")
+    setNewTitle("")
+  }
+}
+
+// ✨ FIX: Integrated real API call for sending messages
+const sendMessage = async (messageContent: string) => {
+  if (!messageContent.trim() || !currentSessionId || isLoading) return;
+
+  const trimmedContent = messageContent.trim();
+  const userMessage: Message = {
+    id: Date.now().toString(), // Temporary ID for the UI
+    role: "user",
+    content: trimmedContent,
+    timestamps: new Date(),
+  };
+
+  // --- START: MODIFIED LOGIC ---
+
+  // 1. Find the current session and determine if it needs a new title.
+  const currentSession = chatSessions.find((s) => s.id === currentSessionId);
+  const isNewChat = currentSession?.title === "New Chat";
+  let newTitle = currentSession?.title || "New Chat";
+
+  if (isNewChat) {
+    // Create a truncated title if the message is long.
+    newTitle =
+      trimmedContent.length > 14
+        ? `${trimmedContent.slice(0, 11)}...` // Slice less to make room for "..."
+        : trimmedContent;
   }
 
-  const openRenameDialog = (sessionId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const session = chatSessions.find((s) => s.id === sessionId)
-    if (session) {
-      setRenamingSessionId(sessionId)
-      setNewTitle(session.title)
-      setRenameDialogOpen(true)
+  // 2. Optimistically update the UI with the user's message and the new title.
+  setChatSessions((prev) =>
+    prev.map((session) => {
+      if (session.id === currentSessionId) {
+        return {
+          ...session,
+          messages: [...session.messages, userMessage],
+          title: newTitle, // Use the new title we just calculated
+          updatedAt: new Date(),
+        };
+      }
+      return session;
+    }),
+  );
+
+  // 3. If the title was changed, send the update to the backend API.
+  // This runs in the background and doesn't block the UI.
+  if (isNewChat) {
+    try {
+      await api.updateChat(currentSessionId, { title: newTitle });
+    } catch (error) {
+      console.error("Failed to update chat title on the backend:", error);
+      // Optional: You could add logic here to revert the title in the UI if the API call fails.
     }
   }
 
-  const handleRename = () => {
-    if (newTitle.trim() && renamingSessionId) {
-      setChatSessions((prev) =>
-        prev.map((session) => (session.id === renamingSessionId ? { ...session, title: newTitle.trim() } : session)),
-      )
-      setRenameDialogOpen(false)
-      setRenamingSessionId("")
-      setNewTitle("")
-    }
-  }
+  // --- END: MODIFIED LOGIC ---
 
-  const sendMessage = async (messageContent: string) => {
-    if (!messageContent.trim() || isLoading) return
+  setIsLoading(true);
+  setInput("");
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: messageContent.trim(),
-      timestamp: new Date(),
-    }
+  try {
+    // 4. Call the backend API to get the assistant's response.
+    const assistantResponse = await api.sendMessage(
+      currentSessionId,
+      trimmedContent,
+    );
 
-    // Update current session with user message
+    const assistantMessage: Message = {
+      id: assistantResponse._id, // Use the real ID from the backend
+      role: "bot",
+      content: assistantResponse.content,
+      timestamps: new Date(assistantResponse.createdAt), // Use real timestamp
+    };
+
+    // 5. Update the UI with the final bot response.
     setChatSessions((prev) =>
       prev.map((session) => {
         if (session.id === currentSessionId) {
-          const updatedMessages = [...session.messages, userMessage]
           return {
             ...session,
-            messages: updatedMessages,
-            title: session.title === "New Chat" ? messageContent.slice(0, 50) + "..." : session.title,
+            messages: [...session.messages, assistantMessage],
             updatedAt: new Date(),
-          }
+          };
         }
-        return session
+        return session;
       }),
-    )
-
-    setIsLoading(true)
-    setInput("")
-
-    try {
-      // Here you would make the API call to your chatbot endpoint
-      // const response = await fetch('/api/chat', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     message: messageContent,
-      //     sessionId: currentSessionId,
-      //     history: currentSession?.messages || []
-      //   })
-      // })
-      // const data = await response.json()
-
-      // Simulated response for now
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: `I understand you're asking about: "${messageContent}". As your DiabetesAI assistant, I'm here to help with diabetes management, nutrition advice, medication information, and health monitoring. 
-
-This is a simulated response. In the actual implementation, this would be replaced with your API response containing personalized diabetes management advice based on your query.
-
-How else can I assist you with your diabetes management today?`,
-        timestamp: new Date(),
-      }
-
-      setChatSessions((prev) =>
-        prev.map((session) => {
-          if (session.id === currentSessionId) {
-            return {
-              ...session,
-              messages: [...session.messages, assistantMessage],
-              updatedAt: new Date(),
-            }
-          }
-          return session
-        }),
-      )
-    } catch (error) {
-      console.error("Error sending message:", error)
-      // Handle error appropriately
-    } finally {
-      setIsLoading(false)
-    }
+    );
+  } catch (error) {
+    console.error("Error sending message:", error);
+    // You could add an error message to the chat UI here.
+  } finally {
+    setIsLoading(false);
   }
+};
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    sendMessage(input)
-  }
 
-  const handleSuggestionClick = (prompt: string) => {
-    sendMessage(prompt)
-  }
+// ✅ No changes needed for these handlers
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault()
+  sendMessage(input)
+}
 
-  const formatTime = (date: Date) => {
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+const handleSuggestionClick = (prompt: string) => {
+  sendMessage(prompt)
+}
 
-    if (diffInHours < 1) return "Just now"
-    if (diffInHours < 24) return `${diffInHours}h ago`
-    if (diffInHours < 48) return "Yesterday"
-    return date.toLocaleDateString()
-  }
+const formatTime = (date: Date) => {
+  const now = new Date()
+  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
 
-  const formatMessageTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  }
+  if (diffInHours < 1) return "Just now"
+  if (diffInHours < 24) return `${diffInHours}h ago`
+  if (diffInHours < 48) return "Yesterday"
+  return date.toLocaleDateString()
+}
+
+const formatMessageTime = (date: Date) => {
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+}
+
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-gray-50">
@@ -309,10 +412,7 @@ How else can I assist you with your diabetes management today?`,
                   ? "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 shadow-sm"
                   : "hover:bg-white hover:shadow-sm border border-transparent"
               }`}
-              onClick={() => {
-                setCurrentSessionId(session.id)
-                setSidebarOpen(false)
-              }}
+              onClick={() => selectChat(session.id)}
             >
               <div
                 className={`p-2 rounded-lg ${
@@ -328,7 +428,7 @@ How else can I assist you with your diabetes management today?`,
 
               <div className="flex-1 min-w-0">
                 <div
-                  className={`text-sm font-medium truncate ${
+                  className={`text-sm font-medium truncate whitespace-nowrap ${
                     currentSessionId === session.id ? "text-gray-900" : "text-gray-700"
                   }`}
                 >
@@ -534,7 +634,7 @@ How else can I assist you with your diabetes management today?`,
                             {message.content}
                           </div>
                         </div>
-                        <div className="text-xs text-gray-500 px-2">{formatMessageTime(message.timestamp)}</div>
+                        <div className="text-xs text-gray-500 px-2">{formatMessageTime(message.timestamps)}</div>
                       </div>
                     </div>
                   </div>

@@ -12,7 +12,6 @@ const messageSchema = new mongoose.Schema(
             ref: 'Chat',
             required: true,
         },
-        sequence: { type: Number, required: true },
         role: { type: String, enum: ['user', 'bot'], required: true },
         content: { type: String, required: true },
     },
