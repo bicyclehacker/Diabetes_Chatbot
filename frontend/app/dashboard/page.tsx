@@ -60,6 +60,7 @@ import { Settings as SettingsComponent } from "@/components/settings"
 import { api } from "@/lib/api"
 import { format } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ChatbotInterface } from "@/components/chatbot-interface"
 
 export default function Dashboard() {
     const router = useRouter()
@@ -408,134 +409,7 @@ export default function Dashboard() {
                 )
 
             case "chat":
-                return (
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-                        <Card className="xl:col-span-2 border-0 shadow-lg">
-                            <CardHeader className="pb-3 sm:pb-4">
-                                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                                    <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-                                    DiabetesAI Assistant
-                                </CardTitle>
-                                <CardDescription className="text-sm">
-                                    Ask me anything about diabetes management, nutrition, or your health data.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <ScrollArea className="h-[40vh] sm:h-[50vh] lg:h-[400px] w-full border rounded-lg p-3 sm:p-4 bg-gray-50">
-                                    <div className="space-y-4">
-                                        {messages.length === 0 && (
-                                            <div className="text-center text-gray-500 py-6 sm:py-8">
-                                                <Bot className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-blue-500" />
-                                                <p className="text-base sm:text-lg font-medium mb-2">Hello! I'm your DiabetesAI Assistant</p>
-                                                <p className="text-sm">
-                                                    Ask me about diabetes management, nutrition tips, or any health-related questions.
-                                                </p>
-                                            </div>
-                                        )}
-                                        {messages.map((message) => (
-                                            <div
-                                                key={message.id}
-                                                className={`flex gap-2 sm:gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                                            >
-                                                <div
-                                                    className={`flex gap-2 sm:gap-3 max-w-[90%] sm:max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"
-                                                        }`}
-                                                >
-                                                    <Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
-                                                        <AvatarFallback
-                                                            className={
-                                                                message.role === "user" ? "bg-blue-500 text-white" : "bg-purple-500 text-white"
-                                                            }
-                                                        >
-                                                            {message.role === "user" ? (
-                                                                <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                            ) : (
-                                                                <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                            )}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div
-                                                        className={`rounded-lg px-3 py-2 sm:px-4 sm:py-2 ${message.role === "user" ? "bg-blue-500 text-white" : "bg-white border shadow-sm"
-                                                            }`}
-                                                    >
-                                                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {isLoading && (
-                                            <div className="flex gap-2 sm:gap-3 justify-start">
-                                                <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
-                                                    <AvatarFallback className="bg-purple-500 text-white">
-                                                        <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="bg-white border shadow-sm rounded-lg px-3 py-2 sm:px-4 sm:py-2">
-                                                    <div className="flex space-x-1">
-                                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                                        <div
-                                                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                                                            style={{ animationDelay: "0.1s" }}
-                                                        ></div>
-                                                        <div
-                                                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                                                            style={{ animationDelay: "0.2s" }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </ScrollArea>
-                                <form onSubmit={handleSubmit} className="flex gap-2">
-                                    <Input
-                                        value={input}
-                                        onChange={handleInputChange}
-                                        placeholder="Ask about diabetes management..."
-                                        className="flex-1 h-9 sm:h-10"
-                                        disabled={isLoading}
-                                    />
-                                    <Button type="submit" disabled={isLoading || !input.trim()} size="sm">
-                                        <Send className="h-4 w-4" />
-                                    </Button>
-                                </form>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="border-0 shadow-lg">
-                            <CardHeader className="pb-3 sm:pb-4">
-                                <CardTitle className="text-base sm:text-lg">Quick Questions</CardTitle>
-                                <CardDescription className="text-sm">Try asking about these topics</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                {[
-                                    "What should my blood sugar be?",
-                                    "Best foods for diabetes",
-                                    "Exercise recommendations",
-                                    "Managing stress with diabetes",
-                                    "Medication side effects",
-                                ].map((question, index) => (
-                                    <Button
-                                        key={index}
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full justify-start text-left h-auto py-2 px-3 bg-transparent text-xs sm:text-sm"
-                                        onClick={() => {
-                                            const syntheticEvent = {
-                                                preventDefault: () => { },
-                                                target: { elements: { prompt: { value: question } } },
-                                            } as any
-                                            handleInputChange({ target: { value: question } } as any)
-                                            setTimeout(() => handleSubmit(syntheticEvent), 100)
-                                        }}
-                                    >
-                                        {question}
-                                    </Button>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    </div>
-                )
+                return <ChatbotInterface />
 
             case "glucose":
                 return <GlucoseLog />
