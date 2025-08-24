@@ -287,6 +287,34 @@ export default function Dashboard() {
                 const totalMedications = medications.length
                 const adherenceRate = totalMedications > 0 ? Math.round((takenToday / totalMedications) * 100) : 0
 
+
+                //Meals
+                const [meals, setMeals] = useState([]);
+
+                useEffect(() => {
+                    const fetchMeals = async () => {
+                        try {
+                            const data = await api.getMeals();
+                            setMeals(data);
+                        } catch (error) {
+                            console.error("failed to fetch meals ", error);
+                        }
+                    }
+
+                    fetchMeals();
+                }, []);
+
+            const now = new Date(); 
+            const dayOfWeek = now.getUTCDay(); // 0 (Sun) - 6 (Sat)
+            const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek); // How many days to subtract/add
+            const startOfWeekUTC = new Date(now);
+            startOfWeekUTC.setUTCDate(now.getUTCDate() + diffToMonday);
+            startOfWeekUTC.setUTCHours(0, 0, 0, 0);                        
+            
+            const mealsThisWeek = meals.filter(
+              (meal) => new Date(meal.createdAt).getTime() >= startOfWeekUTC.getTime()
+            );
+
         switch (activeView) {
             case "overview":
                 return (
@@ -360,7 +388,9 @@ export default function Dashboard() {
                                     <Apple className="h-4 w-4 text-orange-500" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-orange-600">18</div>
+                                    <div className="text-xl sm:text-2xl font-bold text-orange-600">
+                                        {mealsThisWeek.length > 0 ? `${mealsThisWeek.length}` : "No Data"}
+                                    </div>
                                     <p className="text-xs text-gray-600">This week</p>
                                 </CardContent>
                             </Card>
