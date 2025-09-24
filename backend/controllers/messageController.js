@@ -17,19 +17,27 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 // Function to generate AI response
 const generateBotResponse = async (userContent) => {
     try {
-        const systemMessage =
-            "You are a helpful assistant that gives information that is medically relevant and sound.";
+        const systemMessage = `
+You are a helpful assistant that gives medically relevant information specifically about diabetes.
+- Answer only questions related to diabetes.
+- If the question is not about diabetes, respond with: "Sorry, I can only answer questions about diabetes."
+`;
 
-        // Combine system + user message (like in Python)
         const prompt = `${systemMessage}\nUser: ${userContent}\nAssistant:`;
 
         const result = await model.generateContent(prompt);
-        return result.response.text();
+        let text = await result.response.text();
+
+        // Remove Markdown formatting like **bold**, *italic*, __underline__, etc.
+        text = text.replace(/(\*\*|__|\*|_)/g, "").trim();
+
+        return text;
     } catch (err) {
         console.error("Error generating response:", err);
         return "Sorry, I couldn’t process your request.";
     }
 };
+
 
 exports.sendMessage = async (req, res) => {
     try {
