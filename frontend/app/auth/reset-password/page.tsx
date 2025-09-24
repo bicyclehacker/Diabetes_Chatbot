@@ -1,6 +1,7 @@
-'use client';
+'use client'; // MUST be the very first line
+export const dynamic = 'force-dynamic'; // right after 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Heart, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-
 import { api } from '@/lib/api';
-export const dynamic = 'force-dynamic';
 
 export default function ResetPassword() {
     const [password, setPassword] = useState('');
@@ -27,36 +26,44 @@ export default function ResetPassword() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+
     const router = useRouter();
     const searchParams = useSearchParams();
-    const token = searchParams.get('token');
+    const [token, setToken] = useState<string | null>(null);
 
-    // If no token, redirect to signin
-    if (!token) {
-        router.push('/auth/signin');
-        return null;
-    }
+    // Safely get token on client side
+    useEffect(() => {
+        const t = searchParams?.get('token') ?? null;
+        if (!t) {
+            router.replace('/auth/signin'); // safer redirect
+        } else {
+            setToken(t);
+        }
+    }, [searchParams, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!token) return;
+
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
         }
         if (password.length < 6) {
-            // Basic validation, adjust as needed
             setError('Password must be at least 6 characters');
             return;
         }
+
         setIsLoading(true);
         setError('');
+
         try {
             await api.resetPassword({ token, password });
             setSuccess(true);
-            setTimeout(() => router.push('/auth/signin'), 3000); // Redirect after 3s
+            setTimeout(() => router.push('/auth/signin'), 3000);
         } catch (err: any) {
             setError(
-                err.message || 'Failed to reset password. Please try again.'
+                err?.message || 'Failed to reset password. Please try again.'
             );
         } finally {
             setIsLoading(false);
@@ -66,7 +73,6 @@ export default function ResetPassword() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4">
             <div className="w-full max-w-md space-y-4 sm:space-y-6">
-                {/* Logo */}
                 <div className="text-center">
                     <Link
                         href="/"
@@ -90,6 +96,7 @@ export default function ResetPassword() {
                             Enter and confirm your new password
                         </CardDescription>
                     </CardHeader>
+
                     <CardContent className="space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
                         {error && (
                             <Alert variant="destructive">

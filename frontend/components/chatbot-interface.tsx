@@ -730,7 +730,8 @@ export function ChatbotInterface() {
                                                 >
                                                     <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                                                         <ReactMarkdown>
-                                                            {message.content}
+                                                            {message.content ||
+                                                                ''}
                                                         </ReactMarkdown>
                                                     </div>
                                                 </div>
