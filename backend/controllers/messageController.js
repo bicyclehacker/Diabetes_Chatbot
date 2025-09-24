@@ -1,10 +1,35 @@
 const Message = require('../models/Message');
 
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+// Init Gemini client
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+
+// Choose model
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
 // This is a placeholder for your AI logic. For now, it just gives a sample reply.
+// const generateBotResponse = async (userContent) => {
+//     const botContent = `This is a sample reply to: "${userContent}". You can connect your real AI model here.`;
+//     return botContent;
+// }
+
+// Function to generate AI response
 const generateBotResponse = async (userContent) => {
-    const botContent = `This is a sample reply to: "${userContent}". You can connect your real AI model here.`;
-    return botContent;
-}
+    try {
+        const systemMessage =
+            "You are a helpful assistant that gives information that is medically relevant and sound.";
+
+        // Combine system + user message (like in Python)
+        const prompt = `${systemMessage}\nUser: ${userContent}\nAssistant:`;
+
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    } catch (err) {
+        console.error("Error generating response:", err);
+        return "Sorry, I couldn’t process your request.";
+    }
+};
 
 exports.sendMessage = async (req, res) => {
     try {
