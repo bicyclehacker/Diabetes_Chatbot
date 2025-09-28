@@ -1,4 +1,3 @@
-const nodemailer = require('nodemailer')
 const { format } = require('date-fns');
 
 function getReminderMessage(user, reminder) {
@@ -57,55 +56,3 @@ function getReminderMessage(user, reminder) {
             };
     }
 }
-
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-const sendReminderEmail = async (user, reminder) => {
-    if (!user.notifications.emailNotifications) {
-        console.log(`Skipping email for ${user.email} (notifications disabled).`);
-        return;
-    }
-
-    const { subject, html } = getReminderMessage(user, reminder);
-
-    const mailOptions = {
-        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject,
-        html,
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent to ${user.email} for reminder "${reminder.title}"`);
-    } catch (error) {
-        console.error(`Error sending email to ${user.email}:`, error);
-    }
-};
-
-
-// NEW: Function to send OTP email (always send for password reset, ignore notifications pref for security)
-const sendOtpEmail = async (user, otp) => {
-    const mailOptions = {
-        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: 'Password Reset OTP',
-        html: `<h1>Hi ${user.name},</h1><p>Your OTP for password reset is: <strong>${otp}</strong>. It expires in 10 minutes.</p><p>If you didn't request this, ignore this email.</p>`,
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`OTP email sent to ${user.email}`);
-    } catch (error) {
-        console.error(`Error sending OTP email to ${user.email}:`, error);
-        throw new Error('Failed to send OTP email');
-    }
-}
-
-module.exports = { sendReminderEmail, sendOtpEmail }
