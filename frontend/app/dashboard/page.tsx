@@ -1,14 +1,20 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { useChat } from "@ai-sdk/react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useState, useEffect } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     Bot,
     User,
@@ -26,11 +32,11 @@ import {
     FileText,
     Bell,
     LogOut,
-} from "lucide-react"
-import Link from "next/link"
-import { GlucoseChart } from "@/components/glucose-chart"
-import { WeeklyOverview } from "@/components/weekly-overview"
-import { MedicationChart } from "@/components/medication-chart"
+} from 'lucide-react';
+import Link from 'next/link';
+import { GlucoseChart } from '@/components/glucose-chart';
+import { WeeklyOverview } from '@/components/weekly-overview';
+import { MedicationChart } from '@/components/medication-chart';
 import {
     Sidebar,
     SidebarContent,
@@ -47,75 +53,87 @@ import {
     SidebarRail,
     SidebarTrigger,
     useSidebar,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar';
 
-import { GlucoseLog } from "@/components/glucose-log"
-import { Medications } from "@/components/medications"
-import { Meals } from "@/components/meals"
-import { CalendarView } from "@/components/calendar-view"
-import { Reports } from "@/components/reports"
-import { Reminders } from "@/components/reminders"
-import { Settings as SettingsComponent } from "@/components/settings"
+import { GlucoseLog } from '@/components/glucose-log';
+import { Medications } from '@/components/medications';
+import { Meals } from '@/components/meals';
+import { CalendarView } from '@/components/calendar-view';
+import { Reports } from '@/components/reports';
+import { Reminders } from '@/components/reminders';
+import { Settings as SettingsComponent } from '@/components/settings';
 
-import { api } from "@/lib/api"
+import { api } from '@/lib/api';
 import { format } from 'date-fns';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ChatbotInterface } from "@/components/chatbot-interface"
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+} from 'recharts';
+import { ChatbotInterface } from '@/components/chatbot-interface';
 
 export default function Dashboard() {
-    const router = useRouter()
-    const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
-    const [activeView, setActiveView] = useState("overview")
+    const router = useRouter();
+    const { messages, input, handleInputChange, handleSubmit, isLoading } =
+        useChat();
+    const [activeView, setActiveView] = useState('overview');
 
     const navigationItems = [
         {
-            title: "Dashboard",
+            title: 'Dashboard',
             items: [
-                { title: "Overview", icon: BarChart3, id: "overview" },
-                { title: "AI Assistant", icon: MessageCircle, id: "chat" },
+                { title: 'Overview', icon: BarChart3, id: 'overview' },
+                { title: 'AI Assistant', icon: MessageCircle, id: 'chat' },
             ],
         },
         {
-            title: "Health",
+            title: 'Health',
             items: [
-                { title: "Glucose Log", icon: Heart, id: "glucose" },
-                { title: "Medications", icon: Pill, id: "medications" },
-                { title: "Meals", icon: Apple, id: "meals" },
+                { title: 'Glucose Log', icon: Heart, id: 'glucose' },
+                { title: 'Medications', icon: Pill, id: 'medications' },
+                { title: 'Meals', icon: Apple, id: 'meals' },
             ],
         },
         {
-            title: "Tools",
+            title: 'Tools',
             items: [
-                { title: "Calendar", icon: Calendar, id: "calendar" },
-                { title: "Reports", icon: FileText, id: "reports" },
+                { title: 'Calendar', icon: Calendar, id: 'calendar' },
+                { title: 'Reports', icon: FileText, id: 'reports' },
                 // { title: "Reminders", icon: Bell, id: "reminders" },
-                { title: "Settings", icon: Settings, id: "settings" },
+                { title: 'Settings', icon: Settings, id: 'settings' },
             ],
         },
-    ]
+    ];
 
-    const [currentUser, setCurrentUser] = useState<string | null>(null)
+    const [currentUser, setCurrentUser] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await fetch("http://localhost:5000/api/auth/me", {
+                const res = await fetch('http://localhost:5000/api/auth/me', {
                     headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        Authorization: `Bearer ${localStorage.getItem(
+                            'token'
+                        )}`,
                     },
-                })
+                });
 
-                if (!res.ok) throw new Error("Failed to fetch user")
+                if (!res.ok) throw new Error('Failed to fetch user');
 
-                const data = await res.json()
-                setCurrentUser(data.name)
+                const data = await res.json();
+                setCurrentUser(data.name);
             } catch (error) {
-                console.error("Error fetching user:", error)
+                console.error('Error fetching user:', error);
             }
-        }
+        };
 
-        fetchUser()
-    }, [])
+        fetchUser();
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -123,28 +141,27 @@ export default function Dashboard() {
             // await fetch("http://localhost:5000/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
 
             // Clear client-side auth
-            localStorage.removeItem("token")
-            localStorage.removeItem("user")
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             // If you prefer to clear everything: localStorage.clear()
 
             // Navigate to sign-in (or landing page)
-            router.push("/auth/signin")
+            router.push('/auth/signin');
         } catch (err) {
-            console.error("Logout failed:", err)
+            console.error('Logout failed:', err);
             // fallback redirect
-            router.push("/auth/signin")
+            router.push('/auth/signin');
         }
-    }
+    };
 
     const AppSidebar = () => {
-        const { setOpenMobile } = useSidebar()
+        const { setOpenMobile } = useSidebar();
 
         const handleMenuItemClick = (viewId: string) => {
-            setActiveView(viewId)
+            setActiveView(viewId);
             // Close sidebar on mobile after selection
-            setOpenMobile(false)
-        }
-
+            setOpenMobile(false);
+        };
 
         return (
             <Sidebar variant="inset">
@@ -171,8 +188,12 @@ export default function Dashboard() {
                                     {group.items.map((item) => (
                                         <SidebarMenuItem key={item.id}>
                                             <SidebarMenuButton
-                                                onClick={() => handleMenuItemClick(item.id)}
-                                                isActive={activeView === item.id}
+                                                onClick={() =>
+                                                    handleMenuItemClick(item.id)
+                                                }
+                                                isActive={
+                                                    activeView === item.id
+                                                }
                                                 className="w-full"
                                             >
                                                 <item.icon className="h-4 w-4" />
@@ -200,7 +221,7 @@ export default function Dashboard() {
                         <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg">
                             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                             <span className="text-xs text-green-700">
-                                {currentUser ? currentUser : "Loading..."}
+                                {currentUser ? currentUser : 'Loading...'}
                             </span>
                         </div>
                     </div>
@@ -220,32 +241,32 @@ export default function Dashboard() {
 
                 <SidebarRail />
             </Sidebar>
-        )
-    }
+        );
+    };
 
     const renderContent = () => {
-
         const [GlucoseReading, setGlucoseReading] = useState<any[]>([]);
-
 
         useEffect(() => {
             api.getGlucoseReadings()
-                .then(data => {
+                .then((data) => {
                     // store whatever you get into readings state
-                    setGlucoseReading(data || [])
+                    setGlucoseReading(data || []);
                 })
-                .catch(err => console.error("Failed to load readings:", err))
-        }, [])
+                .catch((err) => console.error('Failed to load readings:', err));
+        }, []);
 
         const weeklyAverageReading =
             GlucoseReading.length > 0
                 ? Math.round(
-                    GlucoseReading.reduce((sum, reading) => sum + reading.level, 0) /
-                    GlucoseReading.length
-                )
+                      GlucoseReading.reduce(
+                          (sum, reading) => sum + reading.level,
+                          0
+                      ) / GlucoseReading.length
+                  )
                 : null;
 
-        const lastWeekReadings = GlucoseReading.filter(reading => {
+        const lastWeekReadings = GlucoseReading.filter((reading) => {
             const readingDate = new Date(reading.createdAt);
             const today = new Date();
             const lastWeekStart = new Date(today.setDate(today.getDate() - 7));
@@ -255,17 +276,19 @@ export default function Dashboard() {
         const lastWeekAverage =
             lastWeekReadings.length > 0
                 ? Math.round(
-                    lastWeekReadings.reduce((sum, r) => sum + r.level, 0) /
-                    lastWeekReadings.length
-                )
+                      lastWeekReadings.reduce((sum, r) => sum + r.level, 0) /
+                          lastWeekReadings.length
+                  )
                 : null;
 
         // ✅ Calculate percentage difference
         const percentageChange =
             weeklyAverageReading && lastWeekAverage
                 ? Math.round(
-                    ((weeklyAverageReading - lastWeekAverage) / lastWeekAverage) * 100
-                )
+                      ((weeklyAverageReading - lastWeekAverage) /
+                          lastWeekAverage) *
+                          100
+                  )
                 : null;
 
         //Medication
@@ -277,17 +300,19 @@ export default function Dashboard() {
                     const data = await api.getMedications();
                     setMedications(data);
                 } catch (error) {
-                    console.error("Failed to fetch medications:", error);
+                    console.error('Failed to fetch medications:', error);
                 }
             };
 
             fetchMedications();
         }, []);
 
-        const takenToday = medications.filter((med) => med.taken).length
-        const totalMedications = medications.length
-        const adherenceRate = totalMedications > 0 ? Math.round((takenToday / totalMedications) * 100) : 0
-
+        const takenToday = medications.filter((med) => med.taken).length;
+        const totalMedications = medications.length;
+        const adherenceRate =
+            totalMedications > 0
+                ? Math.round((takenToday / totalMedications) * 100)
+                : 0;
 
         //Meals
         const [meals, setMeals] = useState([]);
@@ -298,100 +323,128 @@ export default function Dashboard() {
                     const data = await api.getMeals();
                     setMeals(data);
                 } catch (error) {
-                    console.error("failed to fetch meals ", error);
+                    console.error('failed to fetch meals ', error);
                 }
-            }
+            };
 
             fetchMeals();
         }, []);
 
         const now = new Date();
         const dayOfWeek = now.getUTCDay(); // 0 (Sun) - 6 (Sat)
-        const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek); // How many days to subtract/add
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // How many days to subtract/add
         const startOfWeekUTC = new Date(now);
         startOfWeekUTC.setUTCDate(now.getUTCDate() + diffToMonday);
         startOfWeekUTC.setUTCHours(0, 0, 0, 0);
 
         const mealsThisWeek = meals.filter(
-            (meal) => new Date(meal.createdAt).getTime() >= startOfWeekUTC.getTime()
+            (meal) =>
+                new Date(meal.createdAt).getTime() >= startOfWeekUTC.getTime()
         );
 
         switch (activeView) {
-            case "overview":
+            case 'overview':
                 return (
                     <div className="space-y-4 sm:space-y-6">
                         {/* Quick Stats */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
                             <Card className="border-0 shadow-lg">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Current Glucose</CardTitle>
+                                    <CardTitle className="text-sm font-medium">
+                                        Current Glucose
+                                    </CardTitle>
                                     <Activity className="h-4 w-4 text-green-500" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-xl sm:text-2xl font-bold text-green-600">
-                                        {GlucoseReading.length > 0 ? `${GlucoseReading[0].level} mg/dL` : "No data"}
+                                        {GlucoseReading.length > 0
+                                            ? `${GlucoseReading[0].level} mg/dL`
+                                            : 'No data'}
                                     </div>
 
                                     <p className="text-xs text-gray-600">
                                         {GlucoseReading.length === 0
-                                            ? "No data available"
+                                            ? 'No data available'
                                             : GlucoseReading[0].level < 70
-                                                ? "Low"
-                                                : GlucoseReading[0].level <= 140
-                                                    ? "Normal range"
-                                                    : "High"
-                                        }
+                                            ? 'Low'
+                                            : GlucoseReading[0].level <= 140
+                                            ? 'Normal range'
+                                            : 'High'}
                                     </p>
-
                                 </CardContent>
                             </Card>
 
                             <Card className="border-0 shadow-lg">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Weekly Average</CardTitle>
+                                    <CardTitle className="text-sm font-medium">
+                                        Weekly Average
+                                    </CardTitle>
                                     <TrendingUp className="h-4 w-4 text-blue-500" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-blue-600"> {weeklyAverageReading !== null ? `${weeklyAverageReading} mg/dL` : "No Data"}</div>
+                                    <div className="text-xl sm:text-2xl font-bold text-blue-600">
+                                        {' '}
+                                        {weeklyAverageReading !== null
+                                            ? `${weeklyAverageReading} mg/dL`
+                                            : 'No Data'}
+                                    </div>
                                     {percentageChange !== null ? (
                                         <p
-                                            className={`text-xs ${percentageChange < 0 ? "text-red-600" : "text-green-600"
-                                                }`}
+                                            className={`text-xs ${
+                                                percentageChange < 0
+                                                    ? 'text-red-600'
+                                                    : 'text-green-600'
+                                            }`}
                                         >
                                             {percentageChange > 0
                                                 ? `↑ ${percentageChange}% from last week`
-                                                : `↓ ${Math.abs(percentageChange)}% from last week`}
+                                                : `↓ ${Math.abs(
+                                                      percentageChange
+                                                  )}% from last week`}
                                         </p>
                                     ) : (
-                                        <p className="text-xs text-gray-600">No previous data to compare</p>
+                                        <p className="text-xs text-gray-600">
+                                            No previous data to compare
+                                        </p>
                                     )}
                                 </CardContent>
                             </Card>
 
                             <Card className="border-0 shadow-lg">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Medications</CardTitle>
+                                    <CardTitle className="text-sm font-medium">
+                                        Medications
+                                    </CardTitle>
                                     <Pill className="h-4 w-4 text-purple-500" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-xl sm:text-2xl font-bold text-purple-600">
-                                        {medications.length > 0 ? `${adherenceRate}%` : "No Data"}
+                                        {medications.length > 0
+                                            ? `${adherenceRate}%`
+                                            : 'No Data'}
                                     </div>
-                                    <p className="text-xs text-gray-600">Adherence rate</p>
+                                    <p className="text-xs text-gray-600">
+                                        Adherence rate
+                                    </p>
                                 </CardContent>
                             </Card>
 
-
                             <Card className="border-0 shadow-lg">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Meals Logged</CardTitle>
+                                    <CardTitle className="text-sm font-medium">
+                                        Meals Logged
+                                    </CardTitle>
                                     <Apple className="h-4 w-4 text-orange-500" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-xl sm:text-2xl font-bold text-orange-600">
-                                        {mealsThisWeek.length > 0 ? `${mealsThisWeek.length}` : "No Data"}
+                                        {mealsThisWeek.length > 0
+                                            ? `${mealsThisWeek.length}`
+                                            : 'No Data'}
                                     </div>
-                                    <p className="text-xs text-gray-600">This week</p>
+                                    <p className="text-xs text-gray-600">
+                                        This week
+                                    </p>
                                 </CardContent>
                             </Card>
                         </div>
@@ -405,31 +458,31 @@ export default function Dashboard() {
                         {/* Weekly Overview */}
                         <WeeklyOverview />
                     </div>
-                )
+                );
 
-            case "chat":
-                return <ChatbotInterface />
+            case 'chat':
+                return <ChatbotInterface />;
 
-            case "glucose":
-                return <GlucoseLog />
+            case 'glucose':
+                return <GlucoseLog />;
 
-            case "medications":
-                return <Medications />
+            case 'medications':
+                return <Medications />;
 
-            case "meals":
-                return <Meals />
+            case 'meals':
+                return <Meals />;
 
-            case "calendar":
-                return <CalendarView />
+            case 'calendar':
+                return <CalendarView />;
 
-            case "reports":
-                return <Reports />
+            case 'reports':
+                return <Reports />;
 
-            case "reminders":
-                return <Reminders />
+            case 'reminders':
+                return <Reminders />;
 
-            case "settings":
-                return <SettingsComponent />
+            case 'settings':
+                return <SettingsComponent />;
 
             default:
                 return (
@@ -439,14 +492,18 @@ export default function Dashboard() {
                                 <Settings className="h-8 w-8 text-gray-400" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-medium text-gray-900">Coming Soon</h3>
-                                <p className="text-gray-500">This feature is under development.</p>
+                                <h3 className="text-lg font-medium text-gray-900">
+                                    Coming Soon
+                                </h3>
+                                <p className="text-gray-500">
+                                    This feature is under development.
+                                </p>
                             </div>
                         </div>
                     </div>
-                )
+                );
         }
-    }
+    };
 
     return (
         <SidebarProvider>
@@ -458,17 +515,26 @@ export default function Dashboard() {
                         <SidebarTrigger className="-ml-1" />
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
                             <div className="min-w-0 flex-1">
-                                <h1 className="text-base sm:text-xl font-semibold truncate">Dashboard</h1>
-                                <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Welcome back,  {currentUser ? currentUser : "Loading..."}!</p>
+                                <h1 className="text-base sm:text-xl font-semibold truncate">
+                                    Dashboard
+                                </h1>
+                                <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">
+                                    Welcome back,{' '}
+                                    {currentUser ? currentUser : 'Loading...'}!
+                                </p>
                             </div>
                         </div>
-                        <Badge className="bg-green-100 text-green-700 hidden md:inline-flex text-xs">Online</Badge>
+                        <Badge className="bg-green-100 text-green-700 hidden md:inline-flex text-xs">
+                            Online
+                        </Badge>
                     </header>
 
                     {/* Main Content */}
-                    <main className="flex-1 p-3 sm:p-4 lg:p-6">{renderContent()}</main>
+                    <main className="flex-1 p-3 sm:p-4 lg:p-6">
+                        {renderContent()}
+                    </main>
                 </SidebarInset>
             </div>
         </SidebarProvider>
-    )
+    );
 }

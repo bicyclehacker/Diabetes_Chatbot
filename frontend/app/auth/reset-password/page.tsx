@@ -1,18 +1,209 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Heart, Loader2, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
 
+import { api } from '@/lib/api';
+
+/**
+ * The main content of the reset password page.
+ * This component contains the form and logic for resetting the user's password.
+ * It's wrapped in a Suspense boundary to wait for the URL search params to be available.
+ */
 function ResetPasswordContent() {
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
 
-    return <div>Reset password for token: {token}</div>;
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+
+        // --- Client-side validation ---
+        if (!password || !confirmPassword) {
+            setError('Both password fields are required.');
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError('Passwords do not match.');
+            return;
+        }
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters long.');
+            return;
+        }
+        if (!token) {
+            setError(
+                'Reset token is missing. Please request a new password reset link.'
+            );
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            // --- API Call ---
+            await api.resetPassword({ token, password });
+            setSuccess(
+                'Your password has been reset successfully! You can now sign in with your new password.'
+            );
+        } catch (err: any) {
+            setError(
+                err.message ||
+                    'Failed to reset password. The link may be invalid or expired.'
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-3 sm:p-4">
+            <div className="w-full max-w-md space-y-4 sm:space-y-6">
+                {/* Logo */}
+                <div className="text-center">
+                    <Link
+                        href="/"
+                        className="inline-flex items-center space-x-2"
+                    >
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                        </div>
+                        <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            DiabetesAI
+                        </span>
+                    </Link>
+                </div>
+
+                <Card className="border-0 shadow-xl">
+                    <CardHeader className="space-y-1 text-center px-4 sm:px-6 py-4 sm:py-6">
+                        <CardTitle className="text-xl sm:text-2xl font-bold">
+                            Set a New Password
+                        </CardTitle>
+                        {!success && (
+                            <CardDescription className="text-sm sm:text-base">
+                                Create a strong new password for your account.
+                            </CardDescription>
+                        )}
+                    </CardHeader>
+                    <CardContent className="space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
+
+                        {success ? (
+                            // --- Success State ---
+                            <div className="text-center space-y-4">
+                                <Alert
+                                    variant="default"
+                                    className="border-green-500 text-green-700"
+                                >
+                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                    <AlertDescription>
+                                        {success}
+                                    </AlertDescription>
+                                </Alert>
+                                <Button
+                                    asChild
+                                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 h-10 sm:h-11"
+                                >
+                                    <Link href="/auth/signin">
+                                        Go to Sign In
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : (
+                            // --- Form State ---
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">
+                                        New Password
+                                    </Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        placeholder="Enter your new password"
+                                        value={password}
+                                        onChange={(e) =>
+                                            setPassword(e.target.value)
+                                        }
+                                        required
+                                        className="h-10 sm:h-11"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirmPassword">
+                                        Confirm New Password
+                                    </Label>
+                                    <Input
+                                        id="confirmPassword"
+                                        type="password"
+                                        placeholder="Confirm your new password"
+                                        value={confirmPassword}
+                                        onChange={(e) =>
+                                            setConfirmPassword(e.target.value)
+                                        }
+                                        required
+                                        className="h-10 sm:h-11"
+                                    />
+                                </div>
+                                <Button
+                                    type="submit"
+                                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 h-10 sm:h-11"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Resetting Password...
+                                        </>
+                                    ) : (
+                                        'Reset Password'
+                                    )}
+                                </Button>
+                            </form>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
 }
 
-export default function ResetPassword() {
+/**
+ * The main export for the page, which wraps the form content
+ * in a Suspense boundary. This is the recommended Next.js pattern
+ * for components that need to read URL search parameters.
+ */
+export default function ResetPasswordPage() {
     return (
-        <Suspense fallback={<p>Loading...</p>}>
+        <Suspense
+            fallback={
+                <div className="flex h-screen items-center justify-center">
+                    Loading...
+                </div>
+            }
+        >
             <ResetPasswordContent />
         </Suspense>
     );

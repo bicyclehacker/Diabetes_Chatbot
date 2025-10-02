@@ -1,4 +1,8 @@
 const Message = require('../models/Message');
+const Medication = require('../models/Medication');
+const Meal = require('../models/Meals');
+const GlucoseReading = require('../models/GlucoseReading');
+const User = require('../models/User');
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
@@ -19,8 +23,7 @@ const generateBotResponse = async (userContent, chatId, userId) => {
     try {
         const systemMessage = `
 You are a helpful assistant that gives medically relevant information specifically about diabetes.
-- Answer only questions related to diabetes.
-- If the question is not about diabetes, respond with: "Sorry, I can only answer questions about diabetes."
+but you can answer any questions even outside the"
 `;
 
         // Fetch last 10 messages
@@ -38,7 +41,33 @@ You are a helpful assistant that gives medically relevant information specifical
         // Append current message
         conversation += `\nUser: ${userContent}\nAssistant:`;
 
-        const prompt = `${systemMessage}\n${conversation}`;
+        const user = await User.findById(userId).lean();
+        const medications = await Medication.find({ user: userId }).lean();
+        const meals = await Meal.find({ user: userId }).lean();
+        const glucoseReadings = await GlucoseReading.find({ user: userId }).sort({ recordedAt: -1 }).lean();
+
+
+        // Build a user data string for AI context
+        const userDataString = `
+                User Info:
+                Name: ${user.name}
+                Email: ${user.email}
+                Diabetes Type: ${user.diabetesType || "N/A"}
+                Diagnosis Date: ${user.diagnosisDate || "N/A"}
+                    
+                Medications:
+                ${medications.map(m => `- ${m.name}, ${m.dosage}, ${m.frequency}, times: ${m.times.join(", ")}`).join("\n") || "None"}
+                    
+                Meals:
+                ${meals.map(m => `- ${m.name} (${m.type}), carbs: ${m.carbs}g, calories: ${m.calories}, foods: ${m.foods.join(", ")}`).join("\n") || "None"}
+                    
+                Recent Glucose Readings:
+                ${glucoseReadings.slice(0, 5).map(g => `- ${g.level} (${g.readingType}) at ${g.recordedAt.toLocaleString()}`).join("\n") || "None"}
+                `;
+
+        const prompt = `${systemMessage}\n${userDataString}\nConversation:\n${conversation}`;
+
+        //Generate AI Response
 
         const result = await model.generateContent(prompt);
         const text = await result.response.text();
