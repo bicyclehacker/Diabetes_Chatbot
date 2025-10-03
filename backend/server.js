@@ -20,7 +20,7 @@ connectDB();
 const app = express();
 app.use(
     cors({
-        origin: ['http://localhost:3000', 'https://diabetes-chatbot-4935.vercel.app/'], // allow only your frontend
+        origin: '*', // allow only your frontend
         credentials: true, // allow cookies if needed later
     })
 );
