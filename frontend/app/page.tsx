@@ -106,7 +106,7 @@ export default function HomePage() {
             name: 'Dr. Sanjay Patel',
             role: 'M.D. Consultant Physician',
             specialty: 'Medical Advisor',
-            image: '/drsanjay.png?height=120&width=120',
+            image: '/drsanjaypatel.png?height=120&width=120',
         },
     ];
 
