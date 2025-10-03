@@ -20,7 +20,7 @@ connectDB();
 const app = express();
 app.use(
     cors({
-        origin: '*', // allow only your frontend
+        origin: ['http://localhost:3000', 'https://diabetes-chatbot-m8zv.onrender.com'], // allow only your frontend
         credentials: true, // allow cookies if needed later
     })
 );
