@@ -67,7 +67,7 @@ export default function HomePage() {
             name: 'Moksh Agrawal',
             role: 'ET22BTCO001',
             specialty: 'AI/ML',
-            image: '/moksh.jpg?height=120&width=120',
+            image: '/moksh.png?height=120&width=120',
         },
         {
             name: 'Tisha Chauhan',
@@ -79,13 +79,13 @@ export default function HomePage() {
             name: 'Krish Chovatiya',
             role: 'ET22BTCO019',
             specialty: 'Frontend',
-            image: '/krish.jpg?height=120&width=120',
+            image: '/krish.png?height=120&width=120',
         },
         {
             name: 'Nikunj Gajera',
             role: 'ET22BTCO033',
             specialty: 'Backend',
-            image: '/nikunj.jpg?height=120&width=120',
+            image: '/placeholder-user.jpg?height=120&width=120',
         },
         {
             name: 'Harsh Gharsandiya',
@@ -100,13 +100,13 @@ export default function HomePage() {
             name: 'Vasundhra Uchhula',
             role: 'Project Advisor',
             specialty: 'Academic Supervisor',
-            image: '/profvasundhara.jpg?height=120&width=120',
+            image: '/profvasundhara.png?height=120&width=120',
         },
         {
             name: 'Dr. Sanjay Patel',
             role: 'M.D. Consultant Physician',
             specialty: 'Medical Advisor',
-            image: '/drsanjay.jpg?height=120&width=120',
+            image: '/drsanjay.png?height=120&width=120',
         },
     ];
 
