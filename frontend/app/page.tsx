@@ -85,7 +85,7 @@ export default function HomePage() {
             name: 'Nikunj Gajera',
             role: 'ET22BTCO033',
             specialty: 'Backend',
-            image: '/placeholder-user.jpg?height=120&width=120',
+            image: '/nikunj.png?height=120&width=120',
         },
         {
             name: 'Harsh Gharsandiya',
