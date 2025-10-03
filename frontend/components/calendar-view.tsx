@@ -50,9 +50,9 @@ import {
     ClipboardList,
     Send,
 } from 'lucide-react';
-import { format, isSameDay, isToday, addDays } from 'date-fns';
+import { format, isSameDay, isToday } from 'date-fns';
 import { api } from '@/lib/api';
-import { DayProps, Dropdown } from 'react-day-picker';
+import DayEvents from './calender-ui';
 
 interface CalendarEvent {
     id: string;
@@ -335,6 +335,8 @@ export function CalendarView() {
         .sort((a, b) => a.date.getTime() - b.date.getTime())
         .slice(0, 5);
 
+    const datesWithEvents = events.map((event) => event.date);
+
     return (
         <div className="space-y-6">
             {/* Summary Cards */}
@@ -606,6 +608,7 @@ export function CalendarView() {
                         </Dialog>
                     </CardHeader>
 
+                    {/* calender section abc */}
                     <CardContent>
                         <Calendar
                             mode="single"
@@ -619,22 +622,40 @@ export function CalendarView() {
                                     setSelectedDate(date);
                                 }
                             }}
+                            modifiers={{
+                                hasEvents: datesWithEvents,
+                            }}
+                            modifiersClassNames={{
+                                hasEvents: 'font-bold',
+                            }}
                             showOutsideDays={false}
                             className="rounded-md border p-3"
                             classNames={{
-                                day: 'h-full w-full p-2 text-left align-center',
+                                day: 'h-full w-full p-2 text-left align-top',
                                 day_selected:
-                                    'bg-primary text-primary-foreground rounded-md hover:bg-primary            hover:text-primary-foreground focus:bg-primary         focus:text-primary-foreground',
-                                day_today: 'bg-accent rounded-md',
+                                    'bg-primary text-primary-foreground rounded-md hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+                                day_today:
+                                    'bg-accent text-accent-foreground font-semibold',
+                                day_range_middle:
+                                    'aria-selected:bg-primary aria-selected:text-primary-foreground',
                             }}
                             components={{
-                                DayContent: ({ date }) => {
+                                DayContent: ({ date, activeModifiers }) => {
                                     const dayEvents = getEventsForDate(date);
+                                    const isCurrentDay = isToday(date);
+                                    const isSelected = activeModifiers.selected;
 
                                     return (
-                                        // Use a React Fragment to avoid adding extra styling
-                                        <>
-                                            <div className="text-sm font-medium mb-1">
+                                        <div className="w-full h-full flex flex-col p-2 pointer-events-auto">
+                                            <div
+                                                className={`text-sm font-medium mb-1 ${
+                                                    isSelected
+                                                        ? 'text-primary-foreground'
+                                                        : isCurrentDay
+                                                        ? 'text-accent-foreground font-bold'
+                                                        : 'text-foreground'
+                                                }`}
+                                            >
                                                 {format(date, 'd')}
                                             </div>
                                             <ScrollArea className="h-16">
@@ -644,9 +665,13 @@ export function CalendarView() {
                                                         .map((event) => (
                                                             <div
                                                                 key={event.id}
-                                                                className={`text-xs p-1 rounded border ${getEventColor(
-                                                                    event.type
-                                                                )} flex items-center gap-1`}
+                                                                className={`text-xs p-1 rounded border ${
+                                                                    isSelected
+                                                                        ? 'bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground'
+                                                                        : getEventColor(
+                                                                              event.type
+                                                                          )
+                                                                } flex items-center gap-1`}
                                                             >
                                                                 {event.isTask && (
                                                                     <button
@@ -661,7 +686,7 @@ export function CalendarView() {
                                                                         className="flex-shrink-0"
                                                                     >
                                                                         {event.completed ? (
-                                                                            <CheckCircle2 className="h-3 w-3         text-green-600" />
+                                                                            <CheckCircle2 className="h-3 w-3 text-green-600" />
                                                                         ) : (
                                                                             <Circle className="h-3 w-3" />
                                                                         )}
@@ -673,7 +698,7 @@ export function CalendarView() {
                                                                 <span
                                                                     className={`truncate ${
                                                                         event.completed
-                                                                            ? 'line-through text-gray-500'
+                                                                            ? 'line-through opacity-60'
                                                                             : ''
                                                                     }`}
                                                                 >
@@ -691,8 +716,14 @@ export function CalendarView() {
                                                             </div>
                                                         ))}
                                                     {dayEvents.length > 3 && (
-                                                        <div className="text-xs text-gray-500 text-center">
-                                                            +
+                                                        <div
+                                                            className={`text-xs text-center ${
+                                                                isSelected
+                                                                    ? 'text-primary-foreground/70'
+                                                                    : 'text-muted-foreground'
+                                                            }`}
+                                                        >
+                                                            +{' '}
                                                             {dayEvents.length -
                                                                 3}{' '}
                                                             more
@@ -700,7 +731,7 @@ export function CalendarView() {
                                                     )}
                                                 </div>
                                             </ScrollArea>
-                                        </>
+                                        </div>
                                     );
                                 },
                             }}
@@ -714,7 +745,10 @@ export function CalendarView() {
                     <Card className="border-0 shadow-lg">
                         <CardHeader>
                             <CardTitle className="text-lg">
-                                {format(selectedDate, 'MMMM d, yyyy')}
+                                {format(
+                                    selectedDate || new Date(),
+                                    'MMMM d, yyyy'
+                                )}
                             </CardTitle>
                             <CardDescription>
                                 Events and tasks for this date
@@ -723,8 +757,9 @@ export function CalendarView() {
                         <CardContent>
                             <ScrollArea className="h-64">
                                 <div className="space-y-3">
-                                    {getEventsForDate(selectedDate).length ===
-                                    0 ? (
+                                    {getEventsForDate(
+                                        selectedDate || new Date()
+                                    ).length === 0 ? (
                                         <div className="text-center py-8 text-gray-500">
                                             <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
                                             <p className="text-sm">
@@ -732,135 +767,135 @@ export function CalendarView() {
                                             </p>
                                         </div>
                                     ) : (
-                                        getEventsForDate(selectedDate).map(
-                                            (event) => (
-                                                <div
-                                                    key={event.id}
-                                                    className={`p-3 rounded-lg border ${getEventColor(
-                                                        event.type
-                                                    )}`}
-                                                >
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex items-start gap-2 flex-1">
-                                                            {event.isTask && (
-                                                                <button
-                                                                    onClick={() =>
-                                                                        toggleTaskCompletion(
-                                                                            event.id
-                                                                        )
-                                                                    }
-                                                                    className="mt-0.5"
+                                        getEventsForDate(
+                                            selectedDate || new Date()
+                                        ).map((event) => (
+                                            <div
+                                                key={event.id}
+                                                className={`p-3 rounded-lg border ${getEventColor(
+                                                    event.type
+                                                )}`}
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-start gap-2 flex-1">
+                                                        {event.isTask && (
+                                                            <button
+                                                                onClick={() =>
+                                                                    toggleTaskCompletion(
+                                                                        event.id
+                                                                    )
+                                                                }
+                                                                className="mt-0.5"
+                                                            >
+                                                                {event.completed ? (
+                                                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                                ) : (
+                                                                    <Circle className="h-4 w-4" />
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                {getEventIcon(
+                                                                    event.type
+                                                                )}
+                                                                <h4
+                                                                    className={`font-medium text-sm ${
+                                                                        event.completed
+                                                                            ? 'line-through'
+                                                                            : ''
+                                                                    }`}
                                                                 >
-                                                                    {event.completed ? (
-                                                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                                                    ) : (
-                                                                        <Circle className="h-4 w-4" />
-                                                                    )}
-                                                                </button>
+                                                                    {
+                                                                        event.title
+                                                                    }
+                                                                </h4>
+                                                            </div>
+                                                            {event.time && (
+                                                                <div className="flex items-center gap-1 mt-1">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    <span className="text-xs">
+                                                                        {
+                                                                            event.time
+                                                                        }
+                                                                    </span>
+                                                                </div>
                                                             )}
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    {getEventIcon(
-                                                                        event.type
-                                                                    )}
-                                                                    <h4
-                                                                        className={`font-medium text-sm ${
-                                                                            event.completed
-                                                                                ? 'line-through'
-                                                                                : ''
-                                                                        }`}
+                                                            {event.description && (
+                                                                <p className="text-xs mt-1 opacity-80">
+                                                                    {
+                                                                        event.description
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                            <div className="flex items-center gap-2 mt-2">
+                                                                {event.frequency !==
+                                                                    'once' && (
+                                                                    <Badge
+                                                                        variant="secondary"
+                                                                        className="text-xs"
                                                                     >
+                                                                        <Repeat className="h-2 w-2 mr-1" />
                                                                         {
-                                                                            event.title
+                                                                            event.frequency
                                                                         }
-                                                                    </h4>
-                                                                </div>
-                                                                {event.time && (
-                                                                    <div className="flex items-center gap-1 mt-1">
-                                                                        <Clock className="h-3 w-3" />
-                                                                        <span className="text-xs">
-                                                                            {
-                                                                                event.time
-                                                                            }
-                                                                        </span>
-                                                                    </div>
+                                                                    </Badge>
                                                                 )}
-                                                                {event.description && (
-                                                                    <p className="text-xs mt-1 opacity-80">
-                                                                        {
-                                                                            event.description
-                                                                        }
-                                                                    </p>
+                                                                {event.emailReminder && (
+                                                                    <Badge
+                                                                        variant="secondary"
+                                                                        className="text-xs"
+                                                                    >
+                                                                        <Mail className="h-2 w-2 mr-1" />
+                                                                        Email
+                                                                    </Badge>
                                                                 )}
-                                                                <div className="flex items-center gap-2 mt-2">
-                                                                    {event.frequency !==
-                                                                        'once' && (
-                                                                        <Badge
-                                                                            variant="secondary"
-                                                                            className="text-xs"
-                                                                        >
-                                                                            <Repeat className="h-2 w-2 mr-1" />
-                                                                            {
-                                                                                event.frequency
-                                                                            }
-                                                                        </Badge>
-                                                                    )}
-                                                                    {event.emailReminder && (
-                                                                        <Badge
-                                                                            variant="secondary"
-                                                                            className="text-xs"
-                                                                        >
-                                                                            <Mail className="h-2 w-2 mr-1" />
-                                                                            Email
-                                                                        </Badge>
-                                                                    )}
-                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1">
-                                                            {event.emailReminder && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    onClick={() =>
-                                                                        sendEmailReminder(
-                                                                            event.id
-                                                                        )
-                                                                    }
-                                                                    className="h-6 w-6 p-0"
-                                                                >
-                                                                    <Send className="h-3 w-3" />
-                                                                </Button>
-                                                            )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        {event.emailReminder && (
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
                                                                 onClick={() =>
-                                                                    setEditingEvent(
-                                                                        event
+                                                                    sendEmailReminder(
+                                                                        event.id
                                                                     )
                                                                 }
                                                                 className="h-6 w-6 p-0"
                                                             >
-                                                                <Edit className="h-3 w-3" />
+                                                                <Send className="h-3 w-3" />
                                                             </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() =>
-                                                                    deleteEvent(
-                                                                        event.id
-                                                                    )
-                                                                }
-                                                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                                            >
-                                                                <Trash2 className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
+                                                        )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() =>
+                                                                setEditingEvent(
+                                                                    event
+                                                                )
+                                                            }
+                                                            className="h-6 w-6 p-0"
+                                                        >
+                                                            <Edit className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() =>
+                                                                deleteEvent(
+                                                                    event.id
+                                                                )
+                                                            }
+                                                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            )
-                                        )
+                                            </div>
+                                        ))
                                     )}
                                 </div>
                             </ScrollArea>

@@ -1,6 +1,6 @@
 import { User } from '@/components/settings';
 
-const API_BASE_URL = 'https://diabetes-chatbot-m8zv.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const fetchWithAuth = async (
     endpoint: string,

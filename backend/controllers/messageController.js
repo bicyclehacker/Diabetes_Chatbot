@@ -23,7 +23,7 @@ const generateBotResponse = async (userContent, chatId, userId) => {
     try {
         const systemMessage = `
 You are a helpful assistant that gives medically relevant information specifically about diabetes.
-but you can answer any questions even outside the"
+but you can answer any questions even outside the scope also. You can also able to provide code if user ask."
 `;
 
         // Fetch last 10 messages

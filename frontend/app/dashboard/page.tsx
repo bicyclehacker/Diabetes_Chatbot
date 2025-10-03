@@ -115,7 +115,8 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/auth/me', {
+                const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+                const res = await fetch(API_BASE_URL + '/auth/me', {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem(
                             'token'
