@@ -63,7 +63,7 @@ When discussing medications, dosages, or new treatment options, you may explain 
 
 For any treatment adjustments (e.g., insulin units, starting a new medicine, stopping a drug, changing frequency), clearly state that this cannot be decided without a clinician’s supervision.
 
-If urgent or dangerous symptoms are mentioned, strongly recommend seeking immediate medical attention.`;
+        If urgent or dangerous symptoms are mentioned, strongly recommend seeking immediate medical attention.`;
 
         // Fetch last 10 messages
         const pastMessages = await Message.find({ chatId })
