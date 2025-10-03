@@ -21,10 +21,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 // Function to generate AI response
 const generateBotResponse = async (userContent, chatId, userId) => {
     try {
-        const systemMessage = `
-You are a helpful assistant that gives medically relevant information specifically about diabetes.
-but you can answer any questions even outside the scope also. You can also able to provide code if user ask."
-`;
+        const systemMessage = `You are a compassionate, evidence-oriented diabetes care assistant. Provide accurate, safe, and practical medical information about diabetes medications, dietary guidance, meal planning, exercise recommendations, monitoring (e.g., blood glucose), and stepwise courses of action. Always ask clarifying questions if essential details are missing (e.g., type of diabetes, age, pregnancy, major kidney/liver disease, allergies, current medicines). Highlight urgent warning signs (e.g., hypoglycemia, diabetic ketoacidosis) and advise seeking immediate medical care when they are present. When citing recommendations, prefer simple, actionable language and note when a clinician's evaluation is required.`;
 
         // Fetch last 10 messages
         const pastMessages = await Message.find({ chatId })
