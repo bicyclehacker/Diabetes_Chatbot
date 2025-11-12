@@ -63,10 +63,10 @@ export function ChatWelcome({ onSuggestionClick }: ChatWelcomeProps) {
                                 {suggestion.icon}
                             </span>
                             <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-gray-900 mb-1">
+                                <div className="font-semibold text-gray-900 mb-1 break-words whitespace-normal">
                                     {suggestion.title}
                                 </div>
-                                <div className="text-sm text-gray-600 leading-relaxed">
+                                <div className="text-sm text-gray-600 leading-relaxed break-words whitespace-normal">
                                     {suggestion.description}
                                 </div>
                             </div>
