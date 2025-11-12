@@ -15,8 +15,7 @@ const mealRoutes = require('./routes/mealRoutes');
 const medicationRoutes = require('./routes/medicationRoutes');
 const glucoseRoutes = require('./routes/glucoseRoutes');
 const prescriptionRoutes = require('./routes/prescritionRoutes');
-
-
+const reportRoutes = require('./routes/reportRoutes')
 
 const cors = require('cors');
 
@@ -46,6 +45,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/meals', mealRoutes);
 app.use('/api/medications', medicationRoutes);
 app.use('/api/glucose', glucoseRoutes);
+app.use('/api/reports', reportRoutes)
 
 
 

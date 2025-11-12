@@ -1,4 +1,5 @@
 const Meal = require('../models/Meals');
+const { generateNutritionInfo } = require('../services/ai.service');
 
 exports.createMeal = async (req, res) => {
     try {
@@ -56,5 +57,31 @@ exports.deleteMeal = async (req, res) => {
             message: 'Failed to delete meal',
             error: err.message,
         });
+    }
+};
+
+
+/**
+ * @desc    Estimate nutrition for a list of foods using AI
+ * @route   POST /api/meals/estimate-nutrition
+ * @access  Private
+ */
+exports.estimateNutrition = async (req, res) => {
+    const { foods } = req.body; // e.g., foods: "Chicken, Rice, Broccoli"
+
+    if (!foods) {
+        return res.status(400).json({ error: 'Food items are required' });
+    }
+
+    try {
+        // Call the new AI service function
+        const nutritionData = await generateNutritionInfo(foods);
+
+        // nutritionData is { calories: 450, carbs: 55 }
+        res.json(nutritionData);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to estimate nutrition from AI' });
     }
 };

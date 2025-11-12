@@ -133,4 +133,30 @@ const sendMedicationEmail = async (user, medication, triggeredTime) => {
     }
 };
 
-module.exports = { sendReminderEmail, sendOtpEmail, sendMedicationEmail }
+const sendReportEmail = async (user, report, pdfBuffer) => {
+    const mailOptions = {
+        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: `Your Report is Ready: ${report.title}`,
+        html: `<h1>Hi ${user.name},</h1>
+        <p>Your health report, "${report.title}", is ready.</p>
+        <p>It is attached to this email for your convenience. You can also download it from the app.</p>`,
+        attachments: [
+            {
+                filename: `${report.title.replace(/ /g, '_')}.pdf`,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+            },
+        ],
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Report email sent to ${user.email}`);
+    } catch (error) {
+        console.error(`Error sending report email to ${user.email}:`, error);
+    }
+};
+
+
+module.exports = { sendReminderEmail, sendOtpEmail, sendMedicationEmail, sendReportEmail }

@@ -298,7 +298,7 @@ export function Medications() {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle>My Medications</CardTitle>
+                            <CardTitle>Medications</CardTitle>
                             <CardDescription>
                                 Manage your daily medications and track
                                 adherence

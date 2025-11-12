@@ -8,4 +8,6 @@ router.get('/', protect, mealController.getMeals);
 router.put('/:id', protect, mealController.updateMeal);
 router.delete('/:id', protect, mealController.deleteMeal);
 
+router.post('/estimate-nutrition', protect, mealController.estimateNutrition);
+
 module.exports = router;

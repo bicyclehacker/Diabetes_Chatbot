@@ -91,8 +91,65 @@ const generateChatTitle = async (userMessage, botMessage) => {
     return title.replace(/"/g, '').trim();
 };
 
+/**
+ * Generates estimated nutrition info for a list of foods.
+ * @param {string} foodString - A comma-separated string of food items.
+ * @returns {Promise<{calories: number, carbs: number}>} - A JSON object with nutrition data.
+ */
+const generateNutritionInfo = async (foodString) => {
+    const prompt = `
+        You are a nutritional analysis expert.
+        Analyze the following list of food items and return a structured JSON object
+        with three keys:
+        
+        1. "name": A creative and descriptive meal name based on the ingredients.
+           **Do not** just list the food items with commas.
+           For example, if the foods are "Chicken, Rice, Broccoli, Soy Sauce", a good name would be "Chicken & Broccoli Stir-fry" or "Healthy Chicken Bowl".
+           If the foods are "Bread, Peanut Butter, Jelly", a good name is "PB&J Sandwich".
+           name must be short so that i can be human readable 
+
+        2. "calories": The total estimated 'calories' as a number.
+        3. "carbs": The total estimated 'carbs' as a number.
+
+        Return *only* the raw JSON object. Do not add any text, formatting, or markdown backticks.
+
+        Food Items: "${foodString}"
+
+        Example Response:
+        { "name": "Chicken & Broccoli Stir-fry", "calories": 550, "carbs": 60 }
+    `;
+    console.log('Sending nutrition prompt to Gemini AI...');
+    try {
+        const aiResponse = await generateSingleResponse(prompt);
+
+        // Clean up the response to ensure it's valid JSON
+        const jsonString = aiResponse
+            .replace(/```json/g, '')
+            .replace(/```/g, '')
+            .trim();
+
+        const nutritionData = JSON.parse(jsonString);
+
+        // Ensure data is valid
+        if (
+            typeof nutritionData.name !== 'string' ||
+            typeof nutritionData.calories !== 'number' ||
+            typeof nutritionData.carbs !== 'number'
+        ) {
+            throw new Error('AI returned invalid data format.');
+        }
+
+        return nutritionData; // e.g., { calories: 450, carbs: 55 }
+
+    } catch (error) {
+        console.error("Failed to parse AI nutrition response:", error);
+        throw new Error("Failed to parse AI nutrition data.");
+    }
+};
+
 module.exports = {
     generateSingleResponse,
     generateChatResponse,
-    generateChatTitle
+    generateChatTitle,
+    generateNutritionInfo
 };

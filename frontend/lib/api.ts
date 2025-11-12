@@ -88,6 +88,65 @@ export const fetchWithAuth = async (
     }
 };
 
+export const fetchWithAuthBlob = async (
+    endpoint: string,
+    options?: RequestInit
+) => {
+    const token = localStorage.getItem('token');
+    const url = `${API_BASE_URL}${endpoint}`;
+
+    const baseHeaders: Record<string, string> = {
+        Authorization: token ? `Bearer ${token}` : '',
+    };
+
+    if (!(options?.body instanceof FormData)) {
+        baseHeaders['Content-Type'] = 'application/json';
+    }
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...baseHeaders,
+                ...options?.headers,
+            },
+        });
+
+        if (response.status === 401) {
+            // ... (same 401 handling as your other function)
+            console.warn('⚠️ Session expired. Redirecting to signin...');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/auth/signin';
+            throw new Error('Session expired. Please login again.');
+        }
+
+        if (!response.ok) {
+            // ... (same error handling as your other function)
+            let errorText = await response.text();
+            console.error('API Blob Error:', errorText);
+            throw new Error(`Request failed with ${response.status}`);
+        }
+
+        // --- THIS IS THE ONLY CHANGE ---
+        // Return the raw Blob, not JSON
+        try {
+            return await response.blob();
+        } catch (e) {
+            console.error('Failed to parse response as blob', e);
+            throw new Error('Failed to read file response');
+        }
+        // --- END OF CHANGE ---
+    } catch (error: any) {
+        // ... (same network error handling)
+        console.group('🔥 NETWORK / FETCH ERROR (BLOB)');
+        console.error('URL:', url);
+        console.error('Error Message:', error.message);
+        console.groupEnd();
+        throw error;
+    }
+};
+
 export const api = {
     // Auth
     register: (data: { name: string; email: string; password: string }) =>
@@ -252,6 +311,12 @@ export const api = {
             method: 'DELETE',
         }),
 
+    getNutritionEstimate: (foods: string) =>
+        fetchWithAuth('/meals/estimate-nutrition', {
+            method: 'POST',
+            body: JSON.stringify({ foods }),
+        }),
+
     // Reminders (Calendar Events)
     getReminders: () => fetchWithAuth('/reminders/'),
 
@@ -371,6 +436,29 @@ export const api = {
             body: formData,
         });
     },
+
+    // Reports
+    getReports: () => fetchWithAuth('/reports/'),
+
+    generateReport: (data: {
+        type: string;
+        period: string;
+        dateRangeText: string;
+        customDate?: Date;
+    }) =>
+        fetchWithAuth('/reports/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }),
+
+    downloadReport: (id: string) =>
+        fetchWithAuthBlob(`/reports/download/${id}`),
+
+    deleteReport: (id: string) =>
+        fetchWithAuth(`/reports/${id}`, {
+            method: 'DELETE',
+        }),
 };
 
 // Example usage in components:
