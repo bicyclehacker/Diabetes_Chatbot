@@ -76,6 +76,7 @@ import {
     ResponsiveContainer,
 } from 'recharts';
 import { ChatbotInterface } from '@/components/chatbot-interface';
+import Prescription from '@/components/Prescription';
 
 export default function Dashboard() {
     const router = useRouter();
@@ -89,6 +90,7 @@ export default function Dashboard() {
             items: [
                 { title: 'Overview', icon: BarChart3, id: 'overview' },
                 { title: 'AI Assistant', icon: MessageCircle, id: 'chat' },
+                { title: 'Prescription', icon: Pill, id: 'prescription' },
             ],
         },
         {
@@ -484,6 +486,9 @@ export default function Dashboard() {
 
             case 'settings':
                 return <SettingsComponent />;
+
+            case 'prescription':
+                return <Prescription />;
 
             default:
                 return (

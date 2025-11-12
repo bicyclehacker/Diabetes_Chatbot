@@ -6,12 +6,17 @@ dotenv.config();
 const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes.js');
+
 const reminderRoutes = require('./routes/reminderRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const mealRoutes = require('./routes/mealRoutes');
 const medicationRoutes = require('./routes/medicationRoutes');
 const glucoseRoutes = require('./routes/glucoseRoutes');
+const prescriptionRoutes = require('./routes/prescritionRoutes');
+
+
 
 const cors = require('cors');
 
@@ -24,19 +29,24 @@ app.use(
         credentials: true, // allow cookies if needed later
     })
 );
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
 
-const userRoutes = require('./routes/userRoutes.js');
+
+
+app.use('/api/prescription', prescriptionRoutes);
+
 app.use('/api/users', userRoutes);
-
-
 app.use('/api/auth', authRoutes);
+
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/meals', mealRoutes);
 app.use('/api/medications', medicationRoutes);
 app.use('/api/glucose', glucoseRoutes);
+
 
 
 // // Run the reminder job every minute

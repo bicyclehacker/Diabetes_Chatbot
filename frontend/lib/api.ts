@@ -9,12 +9,24 @@ export const fetchWithAuth = async (
     const token = localStorage.getItem('token');
     const url = `${API_BASE_URL}${endpoint}`;
 
+    const baseHeaders: Record<string, string> = {
+        Authorization: token ? `Bearer ${token}` : '',
+    };
+
+    // Conditionally add Content-Type
+    // ONLY add 'Content-Type': 'application/json' if the body is NOT FormData
+    if (!(options?.body instanceof FormData)) {
+        baseHeaders['Content-Type'] = 'application/json';
+    }
+
+    // If body IS FormData, we add NO Content-Type header.
+    // The browser will automatically add 'multipart/form-data; boundary=...'
+
     try {
         const response = await fetch(url, {
             ...options,
             headers: {
-                'Content-Type': 'application/json',
-                Authorization: token ? `Bearer ${token}` : '',
+                ...baseHeaders,
                 ...options?.headers,
             },
         });
@@ -349,6 +361,14 @@ export const api = {
         fetchWithAuth(`/messages/${messageId}`, {
             method: 'DELETE',
         }),
+
+    uploadPrescription: (formData: FormData) => {
+        console.log('prescription frontend api called');
+        return fetchWithAuth(`/prescription`, {
+            method: 'POST',
+            body: formData,
+        });
+    },
 };
 
 // Example usage in components:
