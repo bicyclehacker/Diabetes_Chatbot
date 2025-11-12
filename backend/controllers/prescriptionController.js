@@ -52,7 +52,9 @@ exports.uploadPrescription = async (req, res) => {
             Each object in the "medications" array MUST have the following keys:
             - "name": The corrected, full medication name (e.g., "Metformin").
             - "dosage": The corrected dosage string (e.g., "500mg").
-            - "times": An array of strings for recommended times (e.g., ["08:00 AM", "08:00 PM"]). If no time is given, provide logical defaults based on frequency. 
+            - "times": An array of strings for recommended times
+                        If no time is given, provide logical defaults based on frequency. 
+                        You MUST return times in 24-hour "HH:mm" format (e.g., ["08:00", "20:00"]).
             - "notes": Any extra notes, or null.
             - "frequency": You MUST map this to one of the following exact strings:
                 * "Once Daily"
