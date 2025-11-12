@@ -224,9 +224,6 @@ export function Meals() {
     };
 
     const handleDeleteMeal = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this meal?')) {
-            return;
-        }
         try {
             await api.deleteMeal(id);
             setMeals((prev) => prev.filter((meal) => meal._id !== id));
