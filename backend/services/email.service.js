@@ -108,4 +108,29 @@ const sendOtpEmail = async (user, otp) => {
     }
 }
 
-module.exports = { sendReminderEmail, sendOtpEmail }
+
+const sendMedicationEmail = async (user, medication, triggeredTime) => {
+    if (!user.notifications.emailNotifications) {
+        console.log(`Skipping medication email for ${user.email} (notifications disabled).`);
+        return;
+    }
+
+    const mailOptions = {
+        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: `Medication Reminder: ${medication.name}`,
+        html: `<h1>Hi ${user.name},</h1>
+       <p>It's time to take your medication: <strong>${medication.name} (${medication.dosage})</strong>.</p>
+       <p>This dose is scheduled for <strong>${triggeredTime}</strong> your time.</p>
+       <p>Please don’t forget your dose!</p>`,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Medication email sent to ${user.email} for "${medication.name}"`);
+    } catch (error) {
+        console.error(`Error sending medication email to ${user.email}:`, error);
+    }
+};
+
+module.exports = { sendReminderEmail, sendOtpEmail, sendMedicationEmail }

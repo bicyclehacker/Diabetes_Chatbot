@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const { startReminderJob } = require('../jobs/remainder.job')
+const { startMedicationJob } = require('../jobs/medication.job')
 
 const connectDB = async () => {
     try {
@@ -11,6 +12,7 @@ const connectDB = async () => {
         console.log('MongoDB Connected');
 
         startReminderJob();
+        startMedicationJob();
 
     } catch (error) {
         console.error('MongoDB Connection Error', error);

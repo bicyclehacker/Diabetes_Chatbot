@@ -181,6 +181,7 @@ export const api = {
         frequency: string;
         times: string[]; // e.g., ["08:00 AM", "08:00 PM"]
         notes?: string;
+        isNotification?: boolean;
     }) =>
         fetchWithAuth('/medications', {
             method: 'POST',
@@ -198,6 +199,7 @@ export const api = {
             notes?: string;
             taken?: boolean;
             lastTaken?: string;
+            isNotification?: boolean;
         }
     ) =>
         fetchWithAuth(`/medications/${id}`, {

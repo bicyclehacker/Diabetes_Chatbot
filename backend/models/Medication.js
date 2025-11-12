@@ -11,9 +11,12 @@ const medicationSchema = new mongoose.Schema({
     },
     times: { type: [String], required: true }, // e.g., ["08:00 AM", "08:00 PM"]
     notes: { type: String },
+    isNotification: { type: Boolean, default: false },
+
     taken: { type: Boolean, default: false },
     lastTaken: { type: Date },
     createdAt: { type: Date, default: Date.now },
+
 });
 
 module.exports = mongoose.model('Medication', medicationSchema);

@@ -7,6 +7,7 @@ exports.createMedication = async (req, res) => {
             user: req.user.id,
             taken: req.body.taken ?? false,
             lastTaken: req.body.lastTaken ?? null,
+            isNotification: req.body.isNotification ?? false,
         });
         res.status(201).json(medication);
     } catch (err) {
