@@ -1,20 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useChat } from '@ai-sdk/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     Bot,
     User,
@@ -34,9 +23,6 @@ import {
     LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
-import { GlucoseChart } from '@/components/glucose-chart';
-import { WeeklyOverview } from '@/components/weekly-overview';
-import { MedicationChart } from '@/components/medication-chart';
 import {
     Sidebar,
     SidebarContent,
@@ -55,34 +41,16 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 
-import { GlucoseLog } from '@/components/glucose-log';
-import { Medications } from '@/components/medications';
-import { Meals } from '@/components/meals';
-import { CalendarView } from '@/components/calendar-view';
-import { Reports } from '@/components/reports';
-import { Reminders } from '@/components/reminders';
-import { Settings as SettingsComponent } from '@/components/settings';
+// Import the new component that holds the switch logic
+import { DashboardContent } from '@/components/DashboardContent';
 
-import { api } from '@/lib/api';
-import { format } from 'date-fns';
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-} from 'recharts';
-import { ChatbotInterface } from '@/components/chatbot-interface';
-import Prescription from '@/components/Prescription';
+// Note: All other component imports (Charts, Logs, etc.) are moved
+// to DashboardContent and OverviewContent
 
 export default function Dashboard() {
     const router = useRouter();
-    const { messages, input, handleInputChange, handleSubmit, isLoading } =
-        useChat();
     const [activeView, setActiveView] = useState('overview');
+    const [currentUser, setCurrentUser] = useState<string | null>(null);
 
     const navigationItems = [
         {
@@ -90,7 +58,6 @@ export default function Dashboard() {
             items: [
                 { title: 'Overview', icon: BarChart3, id: 'overview' },
                 { title: 'AI Assistant', icon: MessageCircle, id: 'chat' },
-                { title: 'Prescription', icon: Pill, id: 'prescription' },
             ],
         },
         {
@@ -106,23 +73,22 @@ export default function Dashboard() {
             items: [
                 { title: 'Calendar', icon: Calendar, id: 'calendar' },
                 { title: 'Reports', icon: FileText, id: 'reports' },
-                // { title: "Reminders", icon: Bell, id: "reminders" },
                 { title: 'Settings', icon: Settings, id: 'settings' },
             ],
         },
     ];
 
-    const [currentUser, setCurrentUser] = useState<string | null>(null);
-
     useEffect(() => {
         const fetchUser = async () => {
             try {
                 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+                const token = localStorage.getItem('token');
+
+                if (!token) throw new Error('No token found');
+
                 const res = await fetch(API_BASE_URL + '/auth/me', {
                     headers: {
-                        Authorization: `Bearer ${localStorage.getItem(
-                            'token'
-                        )}`,
+                        Authorization: `Bearer ${token}`,
                     },
                 });
 
@@ -131,38 +97,41 @@ export default function Dashboard() {
                 const data = await res.json();
                 setCurrentUser(data.name);
             } catch (error) {
-                console.error('Error fetching user:', error);
+                if (error instanceof Error) {
+                    console.error('Auth Error:', error.message);
+                } else {
+                    // 2. Handle cases where something else was thrown
+                    console.error('An unknown error occurred:', error);
+                }
+
+                // If user fetch fails, redirect to login
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                router.push('/auth/signin');
             }
         };
 
         fetchUser();
-    }, []);
+    }, [router]);
 
     const handleLogout = async () => {
         try {
-            // Optional: call backend to invalidate refresh token or blacklist token
-            // await fetch("http://localhost:5000/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
-
-            // Clear client-side auth
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            // If you prefer to clear everything: localStorage.clear()
-
-            // Navigate to sign-in (or landing page)
             router.push('/auth/signin');
         } catch (err) {
             console.error('Logout failed:', err);
-            // fallback redirect
             router.push('/auth/signin');
         }
     };
 
+    // The AppSidebar component is defined inside Dashboard
+    // This is fine as it uses state (currentUser) from its parent
     const AppSidebar = () => {
         const { setOpenMobile } = useSidebar();
 
         const handleMenuItemClick = (viewId: string) => {
             setActiveView(viewId);
-            // Close sidebar on mobile after selection
             setOpenMobile(false);
         };
 
@@ -229,7 +198,6 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Logout button area (added) */}
                     <div className="px-2 py-2">
                         <Button
                             variant="ghost"
@@ -247,269 +215,7 @@ export default function Dashboard() {
         );
     };
 
-    const renderContent = () => {
-        const [GlucoseReading, setGlucoseReading] = useState<any[]>([]);
-
-        useEffect(() => {
-            api.getGlucoseReadings()
-                .then((data) => {
-                    // store whatever you get into readings state
-                    setGlucoseReading(data || []);
-                })
-                .catch((err) => console.error('Failed to load readings:', err));
-        }, []);
-
-        const weeklyAverageReading =
-            GlucoseReading.length > 0
-                ? Math.round(
-                      GlucoseReading.reduce(
-                          (sum, reading) => sum + reading.level,
-                          0
-                      ) / GlucoseReading.length
-                  )
-                : null;
-
-        const lastWeekReadings = GlucoseReading.filter((reading) => {
-            const readingDate = new Date(reading.createdAt);
-            const today = new Date();
-            const lastWeekStart = new Date(today.setDate(today.getDate() - 7));
-            return readingDate >= lastWeekStart;
-        });
-
-        const lastWeekAverage =
-            lastWeekReadings.length > 0
-                ? Math.round(
-                      lastWeekReadings.reduce((sum, r) => sum + r.level, 0) /
-                          lastWeekReadings.length
-                  )
-                : null;
-
-        // ✅ Calculate percentage difference
-        const percentageChange =
-            weeklyAverageReading && lastWeekAverage
-                ? Math.round(
-                      ((weeklyAverageReading - lastWeekAverage) /
-                          lastWeekAverage) *
-                          100
-                  )
-                : null;
-
-        //Medication
-        const [medications, setMedications] = useState([]);
-
-        useEffect(() => {
-            const fetchMedications = async () => {
-                try {
-                    const data = await api.getMedications();
-                    setMedications(data);
-                } catch (error) {
-                    console.error('Failed to fetch medications:', error);
-                }
-            };
-
-            fetchMedications();
-        }, []);
-
-        const takenToday = medications.filter((med) => med.taken).length;
-        const totalMedications = medications.length;
-        const adherenceRate =
-            totalMedications > 0
-                ? Math.round((takenToday / totalMedications) * 100)
-                : 0;
-
-        //Meals
-        const [meals, setMeals] = useState([]);
-
-        useEffect(() => {
-            const fetchMeals = async () => {
-                try {
-                    const data = await api.getMeals();
-                    setMeals(data);
-                } catch (error) {
-                    console.error('failed to fetch meals ', error);
-                }
-            };
-
-            fetchMeals();
-        }, []);
-
-        const now = new Date();
-        const dayOfWeek = now.getUTCDay(); // 0 (Sun) - 6 (Sat)
-        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // How many days to subtract/add
-        const startOfWeekUTC = new Date(now);
-        startOfWeekUTC.setUTCDate(now.getUTCDate() + diffToMonday);
-        startOfWeekUTC.setUTCHours(0, 0, 0, 0);
-
-        const mealsThisWeek = meals.filter(
-            (meal) =>
-                new Date(meal.createdAt).getTime() >= startOfWeekUTC.getTime()
-        );
-
-        switch (activeView) {
-            case 'overview':
-                return (
-                    <div className="space-y-4 sm:space-y-6">
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-                            <Card className="border-0 shadow-lg">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Current Glucose
-                                    </CardTitle>
-                                    <Activity className="h-4 w-4 text-green-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-green-600">
-                                        {GlucoseReading.length > 0
-                                            ? `${GlucoseReading[0].level} mg/dL`
-                                            : 'No data'}
-                                    </div>
-
-                                    <p className="text-xs text-gray-600">
-                                        {GlucoseReading.length === 0
-                                            ? 'No data available'
-                                            : GlucoseReading[0].level < 70
-                                            ? 'Low'
-                                            : GlucoseReading[0].level <= 140
-                                            ? 'Normal range'
-                                            : 'High'}
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-0 shadow-lg">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Weekly Average
-                                    </CardTitle>
-                                    <TrendingUp className="h-4 w-4 text-blue-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                                        {' '}
-                                        {weeklyAverageReading !== null
-                                            ? `${weeklyAverageReading} mg/dL`
-                                            : 'No Data'}
-                                    </div>
-                                    {percentageChange !== null ? (
-                                        <p
-                                            className={`text-xs ${
-                                                percentageChange < 0
-                                                    ? 'text-red-600'
-                                                    : 'text-green-600'
-                                            }`}
-                                        >
-                                            {percentageChange > 0
-                                                ? `↑ ${percentageChange}% from last week`
-                                                : `↓ ${Math.abs(
-                                                      percentageChange
-                                                  )}% from last week`}
-                                        </p>
-                                    ) : (
-                                        <p className="text-xs text-gray-600">
-                                            No previous data to compare
-                                        </p>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-0 shadow-lg">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Medications
-                                    </CardTitle>
-                                    <Pill className="h-4 w-4 text-purple-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-purple-600">
-                                        {medications.length > 0
-                                            ? `${adherenceRate}%`
-                                            : 'No Data'}
-                                    </div>
-                                    <p className="text-xs text-gray-600">
-                                        Adherence rate
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-0 shadow-lg">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Meals Logged
-                                    </CardTitle>
-                                    <Apple className="h-4 w-4 text-orange-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-xl sm:text-2xl font-bold text-orange-600">
-                                        {mealsThisWeek.length > 0
-                                            ? `${mealsThisWeek.length}`
-                                            : 'No Data'}
-                                    </div>
-                                    <p className="text-xs text-gray-600">
-                                        This week
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Analytics Charts */}
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-                            <GlucoseChart />
-                            <MedicationChart />
-                        </div>
-
-                        {/* Weekly Overview */}
-                        <WeeklyOverview />
-                    </div>
-                );
-
-            case 'chat':
-                return <ChatbotInterface />;
-
-            case 'glucose':
-                return <GlucoseLog />;
-
-            case 'medications':
-                return <Medications />;
-
-            case 'meals':
-                return <Meals />;
-
-            case 'calendar':
-                return <CalendarView />;
-
-            case 'reports':
-                return <Reports />;
-
-            case 'reminders':
-                return <Reminders />;
-
-            case 'settings':
-                return <SettingsComponent />;
-
-            case 'prescription':
-                return <Prescription />;
-
-            default:
-                return (
-                    <div className="flex items-center justify-center h-[50vh]">
-                        <div className="text-center space-y-4">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                                <Settings className="h-8 w-8 text-gray-400" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-900">
-                                    Coming Soon
-                                </h3>
-                                <p className="text-gray-500">
-                                    This feature is under development.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                );
-        }
-    };
+    // renderContent function is GONE
 
     return (
         <SidebarProvider>
@@ -537,7 +243,8 @@ export default function Dashboard() {
 
                     {/* Main Content */}
                     <main className="flex-1 p-3 sm:p-4 lg:p-6">
-                        {renderContent()}
+                        {/* We now render the DashboardContent component */}
+                        <DashboardContent activeView={activeView} />
                     </main>
                 </SidebarInset>
             </div>

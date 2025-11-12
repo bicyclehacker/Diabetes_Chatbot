@@ -1,7 +1,7 @@
 
 const { createWorker } = require('tesseract.js')
 
-const { generateAIText } = require('../services/ai.service')
+const { generateSingleResponse } = require('../services/ai.service')
 const Medication = require('../models/Medication');
 
 exports.uploadPrescription = async (req, res) => {
@@ -77,7 +77,7 @@ exports.uploadPrescription = async (req, res) => {
         `;
 
         if (extractedText) {
-            const aiAnalysisString = await generateAIText(prompt);
+            const aiAnalysisString = await generateSingleResponse(prompt);
             console.log('--- AI Analysis String ---');
             console.log(aiAnalysisString);
 

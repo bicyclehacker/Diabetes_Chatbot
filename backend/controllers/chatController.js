@@ -1,4 +1,6 @@
 const Chat = require('../models/Chat');
+const Message = require('../models/Message')
+const { generateChatTitle } = require('../services/ai.service')
 
 exports.createChat = async (req, res) => {
     try {
