@@ -17,11 +17,29 @@ async function sendViaBrevoApi({ to, subject, html, attachments }) {
 
     // Prepare attachments: Brevo API expects Base64 strings
     let apiAttachments = [];
+
     if (attachments && attachments.length > 0) {
-        apiAttachments = attachments.map(att => ({
-            name: att.filename,
-            content: att.content.toString('base64') // Convert Buffer to Base64
-        }));
+        apiAttachments = attachments.map(att => {
+            // --- FIX STARTS HERE ---
+            // We must ensure the content is a Buffer before converting to Base64.
+            // Sometimes PDF generators return strings or array-buffers.
+            let contentBuffer;
+
+            if (Buffer.isBuffer(att.content)) {
+                contentBuffer = att.content;
+            } else if (typeof att.content === 'string') {
+                contentBuffer = Buffer.from(att.content);
+            } else {
+                // Fallback: try to make a buffer out of whatever it is
+                contentBuffer = Buffer.from(att.content);
+            }
+
+            return {
+                name: att.filename,
+                content: contentBuffer.toString('base64') // Safe conversion to Base64
+            };
+            // --- FIX ENDS HERE ---
+        });
     }
 
     const body = {
@@ -45,7 +63,8 @@ async function sendViaBrevoApi({ to, subject, html, attachments }) {
 
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(`Brevo API Error: ${JSON.stringify(errorData)}`);
+        console.error("🔴 Brevo API Error Details:", JSON.stringify(errorData, null, 2));
+        throw new Error(`Brevo API Error: ${errorData.message || 'Unknown error'}`);
     }
 
     return await response.json();
@@ -204,6 +223,12 @@ const sendMedicationEmail = async (user, medication, triggeredTime) => {
 };
 
 const sendReportEmail = async (user, report, pdfBuffer) => {
+    // Safety check to prevent crashing if PDF generation failed
+    if (!pdfBuffer) {
+        console.error("❌ Error: sendReportEmail called without pdfBuffer");
+        return;
+    }
+
     await sendUnifiedEmail({
         to: user.email,
         subject: `Your Report is Ready: ${report.title}`,
