@@ -1,72 +1,68 @@
 const nodemailer = require('nodemailer');
-const { Resend } = require('resend');
 const { format } = require('date-fns');
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// --- Configuration & Transporter Setup ---
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const SENDER_NAME = "Diabit Bot";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let transporter;
+let senderEmail;
 
-const PROD_SENDER_EMAIL = "onboarding@resend.dev";
-const LOCAL_SENDER_EMAIL = process.env.EMAIL_USER;
+if (IS_PRODUCTION) {
+    // ---------------------------------------------------------
+    // PRODUCTION: Use Brevo (Sendinblue)
+    // ---------------------------------------------------------
+    // This prevents "Connection Timeout" errors on Render.
+    // Ensure 'EMAIL_USER' is your Brevo login email.
+    // Ensure 'EMAIL_PASS' is your Brevo SMTP Key (NOT your login password).
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    port: 587,
-    secure: false,
-    auth: {
-        user: LOCAL_SENDER_EMAIL, // Your Gmail
-        pass: process.env.EMAIL_PASS, // Your Gmail App Password
-    },
-    tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false,
-    }
-});
+    console.log("🚀 Environment: Production (Using Brevo/Sendinblue)");
 
-const sendUnifiedEmail = async ({ to, subject, html, attachments = [] }) => {
-    try {
-        if (IS_PRODUCTION) {
-            // --- PRODUCTION (Resend) ---
-            console.log(`🚀 Sending via Resend to ${to}`);
+    senderEmail = process.env.EMAIL_USER;
 
-            // Convert attachments for Resend (which expects { filename, content })
-            const resendAttachments = attachments.map(att => ({
-                filename: att.filename,
-                content: att.content // The buffer is passed directly
-            }));
-
-            const data = await resend.emails.send({
-                from: PROD_SENDER_EMAIL, // e.g., onboarding@resend.dev
-                to: to,
-                subject: subject,
-                html: html,
-                attachments: resendAttachments
-            });
-            return data;
-
-        } else {
-            // --- LOCALHOST (Nodemailer) ---
-            console.log(`💻 Sending via Nodemailer to ${to}`);
-
-            // Nodemailer uses the 'attachments' array as-is (with contentType)
-            const data = await transporter.sendMail({
-                from: `"${SENDER_NAME}" <${LOCAL_SENDER_EMAIL}>`, // e.g., "Diabit Bot" <user@gmail.com>
-                to: to,
-                subject: subject,
-                html: html,
-                attachments: attachments // Pass original array
-            });
-            return data;
+    transporter = nodemailer.createTransport({
+        host: "smtp-relay.brevo.com",
+        port: 587,
+        secure: false, // Use STARTTLS
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+        tls: {
+            ciphers: 'SSLv3',
+            rejectUnauthorized: false
         }
-    } catch (error) {
-        // Log the service that failed
-        const service = IS_PRODUCTION ? 'Resend' : 'Nodemailer';
-        console.error(`Error sending email via ${service} to ${to}:`, error);
-        throw error; // Re-throw so the caller knows it failed
-    }
-};
+    });
+
+} else {
+    // ---------------------------------------------------------
+    // LOCALHOST: Use Gmail
+    // ---------------------------------------------------------
+    // This is free and easy for local testing.
+    // Ensure 'GMAIL_USER' is your Gmail address.
+    // Ensure 'GMAIL_PASS' is your Google App Password.
+
+    console.log("💻 Environment: Development (Using Gmail)");
+
+    senderEmail = process.env.GMAIL_USER;
+
+    transporter = nodemailer.createTransport({
+        service: "gmail",
+        port: 587,
+        secure: false,
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_PASS,
+        },
+        tls: {
+            ciphers: 'SSLv3',
+            rejectUnauthorized: false
+        }
+    });
+}
+
+// --- Helper: Message Generator ---
 
 function getReminderMessage(user, reminder) {
     const formattedDate = format(new Date(reminder.date), "p, EEEE, MMMM d");
@@ -76,42 +72,42 @@ function getReminderMessage(user, reminder) {
             return {
                 subject: `Medication Reminder: ${reminder.title}`,
                 html: `<h1>Hi ${user.name},</h1>
-               <p>It's time to take your medication: <strong>${reminder.title}</strong>.</p>
-               <p>Scheduled at: <strong>${formattedDate}</strong>.</p>
-               <p>Please don’t forget your dose!</p>`
+                <p>It's time to take your medication: <strong>${reminder.title}</strong>.</p>
+                <p>Scheduled at: <strong>${formattedDate}</strong>.</p>
+                <p>Please don’t forget your dose!</p>`
             };
 
         case 'glucose':
             return {
                 subject: `Glucose Check Reminder`,
                 html: `<h1>Hi ${user.name},</h1>
-               <p>This is a reminder to check your <strong>blood glucose levels</strong>.</p>
-               <p>Scheduled at: <strong>${formattedDate}</strong>.</p>
-               <p>Stay healthy 💙</p>`
+                <p>This is a reminder to check your <strong>blood glucose levels</strong>.</p>
+                <p>Scheduled at: <strong>${formattedDate}</strong>.</p>
+                <p>Stay healthy 💙</p>`
             };
 
         case 'meal':
             return {
                 subject: `Meal Reminder: ${reminder.title}`,
                 html: `<h1>Hi ${user.name},</h1>
-               <p>It's time for your meal: <strong>${reminder.title}</strong>.</p>
-               <p>Scheduled at: <strong>${formattedDate}</strong>.</p>`
+                <p>It's time for your meal: <strong>${reminder.title}</strong>.</p>
+                <p>Scheduled at: <strong>${formattedDate}</strong>.</p>`
             };
 
         case 'appointment':
             return {
                 subject: `Upcoming Appointment: ${reminder.title}`,
                 html: `<h1>Hi ${user.name},</h1>
-               <p>You have an appointment: <strong>${reminder.title}</strong>.</p>
-               <p>When: <strong>${formattedDate}</strong>.</p>`
+                <p>You have an appointment: <strong>${reminder.title}</strong>.</p>
+                <p>When: <strong>${formattedDate}</strong>.</p>`
             };
 
         case 'task':
             return {
                 subject: `Task Reminder: ${reminder.title}`,
                 html: `<h1>Hi ${user.name},</h1>
-               <p>Don't forget your task: <strong>${reminder.title}</strong>.</p>
-               <p>Deadline: <strong>${formattedDate}</strong>.</p>`
+                <p>Don't forget your task: <strong>${reminder.title}</strong>.</p>
+                <p>Deadline: <strong>${formattedDate}</strong>.</p>`
             };
 
         case 'reminder':
@@ -119,86 +115,108 @@ function getReminderMessage(user, reminder) {
             return {
                 subject: `Reminder: ${reminder.title}`,
                 html: `<h1>Hi ${user.name},</h1>
-               <p>This is a reminder for: <strong>${reminder.title}</strong>.</p>
-               <p>Scheduled at: <strong>${formattedDate}</strong>.</p>`
+                <p>This is a reminder for: <strong>${reminder.title}</strong>.</p>
+                <p>Scheduled at: <strong>${formattedDate}</strong>.</p>`
             };
     }
 }
 
+// --- Sending Functions ---
 
 const sendReminderEmail = async (user, reminder) => {
-    if (!user.notifications.emailNotifications) {
+    // Check user preferences
+    if (!user.notifications || !user.notifications.emailNotifications) {
         console.log(`Skipping email for ${user.email} (notifications disabled).`);
         return;
     }
+
     const { subject, html } = getReminderMessage(user, reminder);
 
+    const mailOptions = {
+        from: `"${SENDER_NAME}" <${senderEmail}>`,
+        to: user.email,
+        subject,
+        html,
+    };
+
     try {
-        await sendUnifiedEmail({ to: user.email, subject, html });
+        await transporter.sendMail(mailOptions);
         console.log(`Email sent to ${user.email} for reminder "${reminder.title}"`);
     } catch (error) {
-        // The error is already logged by sendUnifiedEmail
+        console.error(`Error sending email to ${user.email}:`, error);
     }
 };
-
 
 const sendOtpEmail = async (user, otp) => {
+    const mailOptions = {
+        from: `"${SENDER_NAME}" <${senderEmail}>`,
+        to: user.email,
+        subject: 'Password Reset OTP',
+        html: `<h1>Hi ${user.name},</h1><p>Your OTP for password reset is: <strong>${otp}</strong>. It expires in 10 minutes.</p><p>If you didn't request this, ignore this email.</p>`,
+    };
+
     try {
-        await sendUnifiedEmail({
-            to: user.email,
-            subject: 'Password Reset OTP',
-            html: `<h1>Hi ${user.name},</h1><p>Your OTP for password reset is: <strong>${otp}</strong>. It expires in 10 minutes.</p><p>If you didn't request this, ignore this email.</p>`,
-        });
+        await transporter.sendMail(mailOptions);
         console.log(`OTP email sent to ${user.email}`);
     } catch (error) {
-        // Re-throw so the auth controller knows it failed
+        console.error(`Error sending OTP email to ${user.email}:`, error);
+        // Important: Throw error so the controller knows the request failed
         throw new Error('Failed to send OTP email');
     }
-};
-
+}
 
 const sendMedicationEmail = async (user, medication, triggeredTime) => {
-    if (!user.notifications.emailNotifications) {
+    if (!user.notifications || !user.notifications.emailNotifications) {
         console.log(`Skipping medication email for ${user.email} (notifications disabled).`);
         return;
     }
 
+    const mailOptions = {
+        from: `"${SENDER_NAME}" <${senderEmail}>`,
+        to: user.email,
+        subject: `Medication Reminder: ${medication.name}`,
+        html: `<h1>Hi ${user.name},</h1>
+        <p>It's time to take your medication: <strong>${medication.name} (${medication.dosage})</strong>.</p>
+        <p>This dose is scheduled for <strong>${triggeredTime}</strong> your time.</p>
+        <p>Please don’t forget your dose!</p>`,
+    };
+
     try {
-        await sendUnifiedEmail({
-            to: user.email,
-            subject: `Medication Reminder: ${medication.name}`,
-            html: `<h1>Hi ${user.name},</h1>
-           <p>It's time to take your medication: <strong>${medication.name} (${medication.dosage})</strong>.</p>
-           <p>This dose is scheduled for <strong>${triggeredTime}</strong> your time.</p>
-           <p>Please don’t forget your dose!</p>`,
-        });
+        await transporter.sendMail(mailOptions);
         console.log(`Medication email sent to ${user.email} for "${medication.name}"`);
     } catch (error) {
-        // The error is already logged by sendUnifiedEmail
+        console.error(`Error sending medication email to ${user.email}:`, error);
     }
 };
 
 const sendReportEmail = async (user, report, pdfBuffer) => {
+    const mailOptions = {
+        from: `"${SENDER_NAME}" <${senderEmail}>`,
+        to: user.email,
+        subject: `Your Report is Ready: ${report.title}`,
+        html: `<h1>Hi ${user.name},</h1>
+        <p>Your health report, "${report.title}", is ready.</p>
+        <p>It is attached to this email for your convenience. You can also download it from the app.</p>`,
+        attachments: [
+            {
+                filename: `${report.title.replace(/ /g, '_')}.pdf`,
+                content: pdfBuffer,
+                contentType: 'application/pdf',
+            },
+        ],
+    };
+
     try {
-        await sendUnifiedEmail({
-            to: user.email,
-            subject: `Your Report is Ready: ${report.title}`,
-            html: `<h1>Hi ${user.name},</h1>
-             <p>Your health report, "${report.title}", is ready.</p>
-             <p>It is attached to this email for your convenience. You can also download it from the app.</p>`,
-            attachments: [
-                {
-                    filename: `${report.title.replace(/ /g, '_')}.pdf`,
-                    content: pdfBuffer,
-                    contentType: 'application/pdf', // Nodemailer needs this, Resend will ignore it
-                },
-            ],
-        });
+        await transporter.sendMail(mailOptions);
         console.log(`Report email sent to ${user.email}`);
     } catch (error) {
-        // The error is already logged by sendUnifiedEmail
+        console.error(`Error sending report email to ${user.email}:`, error);
     }
 };
 
-
-module.exports = { sendReminderEmail, sendOtpEmail, sendMedicationEmail, sendReportEmail }
+module.exports = {
+    sendReminderEmail,
+    sendOtpEmail,
+    sendMedicationEmail,
+    sendReportEmail
+};
