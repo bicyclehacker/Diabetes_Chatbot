@@ -34,7 +34,7 @@ import {
     TrendingUp,
     TrashIcon,
     Sparkles,
-    Pencil, // 1. Added Pencil icon for Edit
+    Pencil,
 } from 'lucide-react';
 import { estimateNutrition } from '@/lib/nutrition-db';
 
@@ -140,8 +140,34 @@ export function Meals() {
             !newMeal.type ||
             !newMeal.carbs ||
             !newMeal.calories
-        )
+        ) {
+            toast.error(
+                'Please fill in all required fields before adding the meal.'
+            );
+
             return;
+        }
+
+        const carbs = Number(newMeal.carbs);
+        const calories = Number(newMeal.calories);
+
+        if (carbs < 0) {
+            toast.error('Carbs value cannot be negative.');
+            return;
+        }
+        if (carbs > 150) {
+            toast.error('Carbs value seems too high.');
+            return;
+        }
+
+        if (calories < 0) {
+            toast.error('Calories cannot be negative.');
+            return;
+        }
+        if (calories > 1200) {
+            toast.error('Calories value seems too high.');
+            return;
+        }
 
         try {
             const foodsArray = newMeal.foods
@@ -195,6 +221,40 @@ export function Meals() {
     // 5. Handler to submit the Edit form
     const handleUpdateMeal = async () => {
         if (!editingMeal) return;
+
+        if (
+            !editingMeal.name ||
+            !editingMeal.type ||
+            !editingMeal.carbs ||
+            !editingMeal.calories
+        ) {
+            toast.error(
+                'Please fill in all required fields before adding the meal.'
+            );
+
+            return;
+        }
+
+        const carbs = Number(editingMeal.carbs);
+        const calories = Number(editingMeal.calories);
+
+        if (carbs < 0) {
+            toast.error('Carbs value cannot be negative.');
+            return;
+        }
+        if (carbs > 150) {
+            toast.error('Carbs value seems too high.');
+            return;
+        }
+
+        if (calories < 0) {
+            toast.error('Calories cannot be negative.');
+            return;
+        }
+        if (calories > 1200) {
+            toast.error('Calories value seems too high.');
+            return;
+        }
 
         try {
             const foodsArray = editingMeal.foods

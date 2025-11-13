@@ -1,25 +1,25 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Card,
     CardContent,
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import {
     User as UserIcon,
     Bell,
@@ -29,9 +29,9 @@ import {
     Sun,
     Save,
     Trash2,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { api } from "@/lib/api";
+import { api } from '@/lib/api';
 
 export interface User {
     name: string;
@@ -70,24 +70,24 @@ export interface User {
 export function Settings() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const [error, setError] = useState('');
 
     // Profile, Preferences, Notifications, Privacy
     const [profile, setProfile] = useState({
-        name: "",
-        email: "",
-        phone: "",
-        dateOfBirth: "",
-        diabetesType: "",
-        diagnosisDate: "",
-        emergencyContact: "",
+        name: '',
+        email: '',
+        phone: '',
+        dateOfBirth: '',
+        diabetesType: '',
+        diagnosisDate: '',
+        emergencyContact: '',
     });
     const [preferences, setPreferences] = useState({
-        glucoseUnit: "mg-dl",
-        timeFormat: "12-hour",
-        language: "en",
-        timezone: "Asia/Kolkata", // default
-        theme: "light",
+        glucoseUnit: 'mg-dl',
+        timeFormat: '12-hour',
+        language: 'en',
+        timezone: 'Asia/Kolkata', // default
+        theme: 'light',
     });
     const [notifications, setNotifications] = useState({
         medicationReminders: true,
@@ -107,63 +107,73 @@ export function Settings() {
     });
 
     // saving states per toggle to avoid double updates and show disabled state
-    const [savingNotifications, setSavingNotifications] = useState<Record<string, boolean>>({});
-    const [savingPrivacy, setSavingPrivacy] = useState<Record<string, boolean>>({});
+    const [savingNotifications, setSavingNotifications] = useState<
+        Record<string, boolean>
+    >({});
+    const [savingPrivacy, setSavingPrivacy] = useState<Record<string, boolean>>(
+        {}
+    );
 
     useEffect(() => {
         const fetchUser = async () => {
             try {
                 const userData = await api.getUser();
-                if (!userData) throw new Error("User not found");
+                if (!userData) throw new Error('User not found');
 
                 setUser(userData);
 
                 setProfile({
-                    name: userData.name || "",
-                    email: userData.email || "",
-                    phone: userData.phone || "",
+                    name: userData.name || '',
+                    email: userData.email || '',
+                    phone: userData.phone || '',
                     dateOfBirth: userData.dateOfBirth
-                        ? userData.dateOfBirth.split("T")[0]
-                        : "",
-                    diabetesType: userData.diabetesType || "",
+                        ? userData.dateOfBirth.split('T')[0]
+                        : '',
+                    diabetesType: userData.diabetesType || '',
                     diagnosisDate: userData.diagnosisDate
-                        ? userData.diagnosisDate.split("T")[0]
-                        : "",
-                    emergencyContact: userData.emergencyContact || "",
+                        ? userData.diagnosisDate.split('T')[0]
+                        : '',
+                    emergencyContact: userData.emergencyContact || '',
                 });
 
                 setPreferences({
-                    glucoseUnit: userData.preferences?.glucoseUnit || "mg-dl",
-                    timeFormat: userData.preferences?.timeFormat || "12-hour",
-                    language: userData.preferences?.language || "en",
-                    timezone: userData.preferences?.timezone || "Asia/Kolkata",
-                    theme: userData.preferences?.theme || "light",
+                    glucoseUnit: userData.preferences?.glucoseUnit || 'mg-dl',
+                    timeFormat: userData.preferences?.timeFormat || '12-hour',
+                    language: userData.preferences?.language || 'en',
+                    timezone: userData.preferences?.timezone || 'Asia/Kolkata',
+                    theme: userData.preferences?.theme || 'light',
                 });
 
                 setNotifications({
                     medicationReminders:
                         userData.notifications?.medicationReminders ?? true,
-                    glucoseAlerts: userData.notifications?.glucoseAlerts ?? true,
+                    glucoseAlerts:
+                        userData.notifications?.glucoseAlerts ?? true,
                     appointmentReminders:
                         userData.notifications?.appointmentReminders ?? true,
-                    weeklyReports: userData.notifications?.weeklyReports ?? false,
-                    emergencyAlerts: userData.notifications?.emergencyAlerts ?? true,
-                    pushNotifications: userData.notifications?.pushNotifications ?? true,
+                    weeklyReports:
+                        userData.notifications?.weeklyReports ?? false,
+                    emergencyAlerts:
+                        userData.notifications?.emergencyAlerts ?? true,
+                    pushNotifications:
+                        userData.notifications?.pushNotifications ?? true,
                     emailNotifications:
                         userData.notifications?.emailNotifications ?? false,
-                    smsNotifications: userData.notifications?.smsNotifications ?? true,
+                    smsNotifications:
+                        userData.notifications?.smsNotifications ?? true,
                 });
 
                 setPrivacy({
                     shareDataWithDoctor:
                         userData.privacy?.shareDataWithDoctor ?? true,
-                    anonymousAnalytics: userData.privacy?.anonymousAnalytics ?? false,
+                    anonymousAnalytics:
+                        userData.privacy?.anonymousAnalytics ?? false,
                     marketingEmails: userData.privacy?.marketingEmails ?? false,
                     dataExport: userData.privacy?.dataExport ?? true,
                 });
             } catch (err: any) {
                 console.error(err);
-                setError(err.message || "Failed to load user");
+                setError(err.message || 'Failed to load user');
             } finally {
                 setLoading(false);
             }
@@ -174,10 +184,12 @@ export function Settings() {
 
     // Generic persist helper for nested objects (notifications / privacy)
     const persistNestedField = async <T extends object>(
-        topLevelKey: "notifications" | "privacy",
+        topLevelKey: 'notifications' | 'privacy',
         newObject: T,
         keyBeingSaved: string,
-        setSavingMap: React.Dispatch<React.SetStateAction<Record<string, boolean>>>,
+        setSavingMap: React.Dispatch<
+            React.SetStateAction<Record<string, boolean>>
+        >,
         revertCallback: () => void
     ) => {
         try {
@@ -189,7 +201,7 @@ export function Settings() {
 
             if (updatedUser) {
                 setUser(updatedUser);
-                if (topLevelKey === "notifications") {
+                if (topLevelKey === 'notifications') {
                     setNotifications((_) => ({
                         ...notifications,
                         ...(updatedUser.notifications || (newObject as any)),
@@ -206,7 +218,7 @@ export function Settings() {
             // revert UI
             revertCallback();
             // small user-friendly feedback
-            alert("Failed to save changes. Please try again.");
+            alert('Failed to save changes. Please try again.');
         } finally {
             // clear saving flag
             setSavingMap((s) => {
@@ -220,14 +232,14 @@ export function Settings() {
     // Notification toggle handler - optimistic update + persist
     const handleToggleNotification = async (
         key:
-            | "medicationReminders"
-            | "glucoseAlerts"
-            | "appointmentReminders"
-            | "weeklyReports"
-            | "emergencyAlerts"
-            | "pushNotifications"
-            | "emailNotifications"
-            | "smsNotifications",
+            | 'medicationReminders'
+            | 'glucoseAlerts'
+            | 'appointmentReminders'
+            | 'weeklyReports'
+            | 'emergencyAlerts'
+            | 'pushNotifications'
+            | 'emailNotifications'
+            | 'smsNotifications',
         value: boolean
     ) => {
         const prevValue = notifications[key];
@@ -237,7 +249,7 @@ export function Settings() {
         setNotifications(newNotifications);
 
         await persistNestedField(
-            "notifications",
+            'notifications',
             newNotifications,
             `notifications.${key}`,
             setSavingNotifications,
@@ -247,7 +259,11 @@ export function Settings() {
 
     // Privacy toggle handler - optimistic update + persist
     const handleTogglePrivacy = async (
-        key: "shareDataWithDoctor" | "anonymousAnalytics" | "marketingEmails" | "dataExport",
+        key:
+            | 'shareDataWithDoctor'
+            | 'anonymousAnalytics'
+            | 'marketingEmails'
+            | 'dataExport',
         value: boolean
     ) => {
         const prevValue = (privacy as any)[key];
@@ -256,7 +272,7 @@ export function Settings() {
         setPrivacy(newPrivacy);
 
         await persistNestedField(
-            "privacy",
+            'privacy',
             newPrivacy,
             `privacy.${key}`,
             setSavingPrivacy,
@@ -270,13 +286,13 @@ export function Settings() {
             const updated = await api.updateUser({ ...profile });
             if (updated) {
                 setUser(updated);
-                alert("Profile updated successfully!");
+                alert('Profile updated successfully!');
             } else {
-                alert("Profile updated (no fresh data returned).");
+                alert('Profile updated (no fresh data returned).');
             }
         } catch (err) {
-            console.error("Failed to update profile", err);
-            alert("Error updating profile.");
+            console.error('Failed to update profile', err);
+            alert('Error updating profile.');
         }
     };
 
@@ -287,31 +303,31 @@ export function Settings() {
             if (updated) {
                 setUser(updated);
                 setPreferences(updated.preferences || preferences);
-                alert("Preferences updated successfully!");
+                alert('Preferences updated successfully!');
             } else {
-                alert("Preferences updated (no fresh data returned).");
+                alert('Preferences updated (no fresh data returned).');
             }
         } catch (err) {
-            console.error("Failed to update preferences", err);
-            alert("Error updating preferences.");
+            console.error('Failed to update preferences', err);
+            alert('Error updating preferences.');
         }
     };
 
     // Delete account
     const handleDeleteAccount = async () => {
         const confirmDelete = confirm(
-            "Are you sure you want to delete your account? This action cannot be undone."
+            'Are you sure you want to delete your account? This action cannot be undone.'
         );
         if (!confirmDelete) return;
 
         try {
             await api.deleteUser();
-            alert("Account deleted successfully.");
+            alert('Account deleted successfully.');
             localStorage.clear();
-            window.location.href = "/";
+            window.location.href = '/';
         } catch (err) {
-            console.error("Failed to delete account", err);
-            alert("Failed to delete account. Please try again.");
+            console.error('Failed to delete account', err);
+            alert('Failed to delete account. Please try again.');
         }
     };
 
@@ -320,7 +336,9 @@ export function Settings() {
     }
 
     if (error) {
-        return <div className="text-red-600">Error loading settings: {error}</div>;
+        return (
+            <div className="text-red-600">Error loading settings: {error}</div>
+        );
     }
 
     return (
@@ -346,7 +364,10 @@ export function Settings() {
                                 id="name"
                                 value={profile.name}
                                 onChange={(e) =>
-                                    setProfile({ ...profile, name: e.target.value })
+                                    setProfile({
+                                        ...profile,
+                                        name: e.target.value,
+                                    })
                                 }
                                 className="h-9 sm:h-10"
                             />
@@ -360,7 +381,10 @@ export function Settings() {
                                 type="email"
                                 value={profile.email}
                                 onChange={(e) =>
-                                    setProfile({ ...profile, email: e.target.value })
+                                    setProfile({
+                                        ...profile,
+                                        email: e.target.value,
+                                    })
                                 }
                                 className="h-9 sm:h-10"
                             />
@@ -373,7 +397,10 @@ export function Settings() {
                                 id="phone"
                                 value={profile.phone}
                                 onChange={(e) =>
-                                    setProfile({ ...profile, phone: e.target.value })
+                                    setProfile({
+                                        ...profile,
+                                        phone: e.target.value,
+                                    })
                                 }
                                 className="h-9 sm:h-10"
                             />
@@ -387,7 +414,10 @@ export function Settings() {
                                 type="date"
                                 value={profile.dateOfBirth}
                                 onChange={(e) =>
-                                    setProfile({ ...profile, dateOfBirth: e.target.value })
+                                    setProfile({
+                                        ...profile,
+                                        dateOfBirth: e.target.value,
+                                    })
                                 }
                                 className="h-9 sm:h-10"
                             />
@@ -399,16 +429,25 @@ export function Settings() {
                             <Select
                                 value={profile.diabetesType}
                                 onValueChange={(value) =>
-                                    setProfile({ ...profile, diabetesType: value })
+                                    setProfile({
+                                        ...profile,
+                                        diabetesType: value,
+                                    })
                                 }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="type-1">Type 1</SelectItem>
-                                    <SelectItem value="type-2">Type 2</SelectItem>
-                                    <SelectItem value="gestational">Gestational</SelectItem>
+                                    <SelectItem value="type-1">
+                                        Type 1
+                                    </SelectItem>
+                                    <SelectItem value="type-2">
+                                        Type 2
+                                    </SelectItem>
+                                    <SelectItem value="gestational">
+                                        Gestational
+                                    </SelectItem>
                                     <SelectItem value="other">Other</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -422,7 +461,10 @@ export function Settings() {
                                 type="date"
                                 value={profile.diagnosisDate}
                                 onChange={(e) =>
-                                    setProfile({ ...profile, diagnosisDate: e.target.value })
+                                    setProfile({
+                                        ...profile,
+                                        diagnosisDate: e.target.value,
+                                    })
                                 }
                                 className="h-9 sm:h-10"
                             />
@@ -437,12 +479,19 @@ export function Settings() {
                             placeholder="Name - Phone Number"
                             value={profile.emergencyContact}
                             onChange={(e) =>
-                                setProfile({ ...profile, emergencyContact: e.target.value })
+                                setProfile({
+                                    ...profile,
+                                    emergencyContact: e.target.value,
+                                })
                             }
                             className="h-9 sm:h-10"
                         />
                     </div>
-                    <Button onClick={handleSaveProfile} className="w-full sm:w-auto" size="sm">
+                    <Button
+                        onClick={handleSaveProfile}
+                        className="w-full sm:w-auto"
+                        size="sm"
+                    >
                         <Save className="h-4 w-4 mr-2" />
                         Save Profile
                     </Button>
@@ -469,7 +518,10 @@ export function Settings() {
                             <Select
                                 value={preferences.glucoseUnit}
                                 onValueChange={(value) =>
-                                    setPreferences({ ...preferences, glucoseUnit: value })
+                                    setPreferences({
+                                        ...preferences,
+                                        glucoseUnit: value,
+                                    })
                                 }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
@@ -487,14 +539,19 @@ export function Settings() {
                             <Select
                                 value={preferences.timeFormat}
                                 onValueChange={(value) =>
-                                    setPreferences({ ...preferences, timeFormat: value })
+                                    setPreferences({
+                                        ...preferences,
+                                        timeFormat: value,
+                                    })
                                 }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="12-hour">12 Hour</SelectItem>
+                                    <SelectItem value="12-hour">
+                                        12 Hour
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -505,7 +562,10 @@ export function Settings() {
                             <Select
                                 value={preferences.language}
                                 onValueChange={(value) =>
-                                    setPreferences({ ...preferences, language: value })
+                                    setPreferences({
+                                        ...preferences,
+                                        language: value,
+                                    })
                                 }
                             >
                                 <SelectTrigger className="h-9 sm:h-10">
@@ -547,7 +607,11 @@ export function Settings() {
                             </Select>
                         </div> */}
                     </div>
-                    <Button onClick={handleSavePreferences} className="w-full sm:w-auto" size="sm">
+                    <Button
+                        onClick={handleSavePreferences}
+                        className="w-full sm:w-auto"
+                        size="sm"
+                    >
                         <Save className="h-4 w-4 mr-2" />
                         Save Preferences
                     </Button>
@@ -561,22 +625,38 @@ export function Settings() {
                         <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                         Notifications
                     </CardTitle>
-                    <CardDescription className="text-sm">Manage your notification preferences</CardDescription>
+                    <CardDescription className="text-sm">
+                        Manage your notification preferences
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">Medication Reminders</Label>
-                                <p className="text-xs text-gray-500">Get notified when it's time to take your medication</p>
+                                <Label className="text-sm font-medium">
+                                    Medication Reminders
+                                </Label>
+                                <p className="text-xs text-gray-500">
+                                    Get notified when it's time to take your
+                                    medication
+                                </p>
                             </div>
                             <Switch
                                 checked={notifications.medicationReminders}
-                                onCheckedChange={(checked: boolean) => handleToggleNotification("medicationReminders", checked)}
-                                disabled={!!savingNotifications["notifications.medicationReminders"]}
+                                onCheckedChange={(checked: boolean) =>
+                                    handleToggleNotification(
+                                        'medicationReminders',
+                                        checked
+                                    )
+                                }
+                                disabled={
+                                    !!savingNotifications[
+                                        'notifications.medicationReminders'
+                                    ]
+                                }
                             />
                         </div>
-                        <Separator />
+                        {/* <Separator />
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-medium">Glucose Alerts</Label>
@@ -587,19 +667,32 @@ export function Settings() {
                                 onCheckedChange={(checked: boolean) => handleToggleNotification("glucoseAlerts", checked)}
                                 disabled={!!savingNotifications["notifications.glucoseAlerts"]}
                             />
-                        </div>
-                        <Separator />
+                        </div> */}
+                        {/* <Separator />
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">Appointment Reminders</Label>
-                                <p className="text-xs text-gray-500">Reminders for upcoming medical appointments</p>
+                                <Label className="text-sm font-medium">
+                                    Appointment Reminders
+                                </Label>
+                                <p className="text-xs text-gray-500">
+                                    Reminders for upcoming medical appointments
+                                </p>
                             </div>
                             <Switch
                                 checked={notifications.appointmentReminders}
-                                onCheckedChange={(checked: boolean) => handleToggleNotification("appointmentReminders", checked)}
-                                disabled={!!savingNotifications["notifications.appointmentReminders"]}
+                                onCheckedChange={(checked: boolean) =>
+                                    handleToggleNotification(
+                                        'appointmentReminders',
+                                        checked
+                                    )
+                                }
+                                disabled={
+                                    !!savingNotifications[
+                                        'notifications.appointmentReminders'
+                                    ]
+                                }
                             />
-                        </div>
+                        </div> */}
                         <Separator />
                         {/* <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
@@ -615,13 +708,26 @@ export function Settings() {
                         {/* <Separator /> */}
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">Email Notifications</Label>
-                                <p className="text-xs text-gray-500">Receive notifications via email</p>
+                                <Label className="text-sm font-medium">
+                                    Email Notifications
+                                </Label>
+                                <p className="text-xs text-gray-500">
+                                    Receive notifications via email
+                                </p>
                             </div>
                             <Switch
                                 checked={notifications.emailNotifications}
-                                onCheckedChange={(checked: boolean) => handleToggleNotification("emailNotifications", checked)}
-                                disabled={!!savingNotifications["notifications.emailNotifications"]}
+                                onCheckedChange={(checked: boolean) =>
+                                    handleToggleNotification(
+                                        'emailNotifications',
+                                        checked
+                                    )
+                                }
+                                disabled={
+                                    !!savingNotifications[
+                                        'notifications.emailNotifications'
+                                    ]
+                                }
                             />
                         </div>
                     </div>
@@ -635,7 +741,9 @@ export function Settings() {
                         <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                         Privacy & Security
                     </CardTitle>
-                    <CardDescription className="text-sm">Control your data and privacy settings</CardDescription>
+                    <CardDescription className="text-sm">
+                        Control your data and privacy settings
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-4">
@@ -665,13 +773,19 @@ export function Settings() {
                         <Separator /> */}
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">Data Export</Label>
-                                <p className="text-xs text-gray-500">Allow exporting your health data</p>
+                                <Label className="text-sm font-medium">
+                                    Data Export
+                                </Label>
+                                <p className="text-xs text-gray-500">
+                                    Allow exporting your health data
+                                </p>
                             </div>
                             <Switch
                                 checked={privacy.dataExport}
-                                onCheckedChange={(checked: boolean) => handleTogglePrivacy("dataExport", checked)}
-                                disabled={!!savingPrivacy["privacy.dataExport"]}
+                                onCheckedChange={(checked: boolean) =>
+                                    handleTogglePrivacy('dataExport', checked)
+                                }
+                                disabled={!!savingPrivacy['privacy.dataExport']}
                             />
                         </div>
                     </div>
@@ -685,16 +799,26 @@ export function Settings() {
                         <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                         Danger Zone
                     </CardTitle>
-                    <CardDescription className="text-sm">Irreversible and destructive actions</CardDescription>
+                    <CardDescription className="text-sm">
+                        Irreversible and destructive actions
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
                         <div className="p-3 sm:p-4 border border-red-200 rounded-lg bg-red-50">
-                            <h3 className="font-medium text-red-800 text-sm sm:text-base">Delete Account</h3>
+                            <h3 className="font-medium text-red-800 text-sm sm:text-base">
+                                Delete Account
+                            </h3>
                             <p className="text-xs sm:text-sm text-red-600 mt-1">
-                                Once you delete your account, there is no going back. Please be certain.
+                                Once you delete your account, there is no going
+                                back. Please be certain.
                             </p>
-                            <Button variant="destructive" onClick={handleDeleteAccount} className="mt-3" size="sm">
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteAccount}
+                                className="mt-3"
+                                size="sm"
+                            >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete Account
                             </Button>
