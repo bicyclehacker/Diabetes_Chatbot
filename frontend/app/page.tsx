@@ -19,6 +19,7 @@ import {
     Zap,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Canvas } from '@react-three/fiber';
 import { Hero3D } from '@/components/hero-3d';
 import { useEffect, useState } from 'react';
 
@@ -186,8 +187,18 @@ export default function HomePage() {
                                 </Button>
                             </div>
                         </div>
-                        <div className="h-48 sm:h-64 lg:h-80">
-                            <Hero3D />
+                        <div className="h-48 sm:h-64 lg:h-80 w-full">
+                            <Canvas>
+                                {/* Optional: Add lights so your 3D object isn't pitch black */}
+                                <ambientLight intensity={0.5} />
+                                <directionalLight
+                                    position={[10, 10, 5]}
+                                    intensity={1}
+                                />
+
+                                {/* Your actual 3D component */}
+                                <Hero3D />
+                            </Canvas>
                         </div>
                     </div>
                 </div>
