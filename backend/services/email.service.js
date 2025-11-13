@@ -1,5 +1,72 @@
-const nodemailer = require('nodemailer')
+const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { format } = require('date-fns');
+
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+const SENDER_NAME = "Diabit Bot";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const PROD_SENDER_EMAIL = "onboarding@resend.dev";
+const LOCAL_SENDER_EMAIL = process.env.EMAIL_USER;
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    port: 587,
+    secure: false,
+    auth: {
+        user: LOCAL_SENDER_EMAIL, // Your Gmail
+        pass: process.env.EMAIL_PASS, // Your Gmail App Password
+    },
+    tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false,
+    }
+});
+
+const sendUnifiedEmail = async ({ to, subject, html, attachments = [] }) => {
+    try {
+        if (IS_PRODUCTION) {
+            // --- PRODUCTION (Resend) ---
+            console.log(`🚀 Sending via Resend to ${to}`);
+
+            // Convert attachments for Resend (which expects { filename, content })
+            const resendAttachments = attachments.map(att => ({
+                filename: att.filename,
+                content: att.content // The buffer is passed directly
+            }));
+
+            const data = await resend.emails.send({
+                from: PROD_SENDER_EMAIL, // e.g., onboarding@resend.dev
+                to: to,
+                subject: subject,
+                html: html,
+                attachments: resendAttachments
+            });
+            return data;
+
+        } else {
+            // --- LOCALHOST (Nodemailer) ---
+            console.log(`💻 Sending via Nodemailer to ${to}`);
+
+            // Nodemailer uses the 'attachments' array as-is (with contentType)
+            const data = await transporter.sendMail({
+                from: `"${SENDER_NAME}" <${LOCAL_SENDER_EMAIL}>`, // e.g., "Diabit Bot" <user@gmail.com>
+                to: to,
+                subject: subject,
+                html: html,
+                attachments: attachments // Pass original array
+            });
+            return data;
+        }
+    } catch (error) {
+        // Log the service that failed
+        const service = IS_PRODUCTION ? 'Resend' : 'Nodemailer';
+        console.error(`Error sending email via ${service} to ${to}:`, error);
+        throw error; // Re-throw so the caller knows it failed
+    }
+};
 
 function getReminderMessage(user, reminder) {
     const formattedDate = format(new Date(reminder.date), "p, EEEE, MMMM d");
@@ -58,61 +125,36 @@ function getReminderMessage(user, reminder) {
     }
 }
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false, // Sometimes helps with self-signed cert issues in cloud
-    }
-});
 
 const sendReminderEmail = async (user, reminder) => {
     if (!user.notifications.emailNotifications) {
         console.log(`Skipping email for ${user.email} (notifications disabled).`);
         return;
     }
-
     const { subject, html } = getReminderMessage(user, reminder);
 
-    const mailOptions = {
-        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject,
-        html,
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
+        await sendUnifiedEmail({ to: user.email, subject, html });
         console.log(`Email sent to ${user.email} for reminder "${reminder.title}"`);
     } catch (error) {
-        console.error(`Error sending email to ${user.email}:`, error);
+        // The error is already logged by sendUnifiedEmail
     }
 };
 
 
-// NEW: Function to send OTP email (always send for password reset, ignore notifications pref for security)
 const sendOtpEmail = async (user, otp) => {
-    const mailOptions = {
-        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: 'Password Reset OTP',
-        html: `<h1>Hi ${user.name},</h1><p>Your OTP for password reset is: <strong>${otp}</strong>. It expires in 10 minutes.</p><p>If you didn't request this, ignore this email.</p>`,
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
+        await sendUnifiedEmail({
+            to: user.email,
+            subject: 'Password Reset OTP',
+            html: `<h1>Hi ${user.name},</h1><p>Your OTP for password reset is: <strong>${otp}</strong>. It expires in 10 minutes.</p><p>If you didn't request this, ignore this email.</p>`,
+        });
         console.log(`OTP email sent to ${user.email}`);
     } catch (error) {
-        console.error(`Error sending OTP email to ${user.email}:`, error);
+        // Re-throw so the auth controller knows it failed
         throw new Error('Failed to send OTP email');
     }
-}
+};
 
 
 const sendMedicationEmail = async (user, medication, triggeredTime) => {
@@ -121,46 +163,40 @@ const sendMedicationEmail = async (user, medication, triggeredTime) => {
         return;
     }
 
-    const mailOptions = {
-        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: `Medication Reminder: ${medication.name}`,
-        html: `<h1>Hi ${user.name},</h1>
-       <p>It's time to take your medication: <strong>${medication.name} (${medication.dosage})</strong>.</p>
-       <p>This dose is scheduled for <strong>${triggeredTime}</strong> your time.</p>
-       <p>Please don’t forget your dose!</p>`,
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
+        await sendUnifiedEmail({
+            to: user.email,
+            subject: `Medication Reminder: ${medication.name}`,
+            html: `<h1>Hi ${user.name},</h1>
+           <p>It's time to take your medication: <strong>${medication.name} (${medication.dosage})</strong>.</p>
+           <p>This dose is scheduled for <strong>${triggeredTime}</strong> your time.</p>
+           <p>Please don’t forget your dose!</p>`,
+        });
         console.log(`Medication email sent to ${user.email} for "${medication.name}"`);
     } catch (error) {
-        console.error(`Error sending medication email to ${user.email}:`, error);
+        // The error is already logged by sendUnifiedEmail
     }
 };
 
 const sendReportEmail = async (user, report, pdfBuffer) => {
-    const mailOptions = {
-        from: `"Diabit Bot" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: `Your Report is Ready: ${report.title}`,
-        html: `<h1>Hi ${user.name},</h1>
-        <p>Your health report, "${report.title}", is ready.</p>
-        <p>It is attached to this email for your convenience. You can also download it from the app.</p>`,
-        attachments: [
-            {
-                filename: `${report.title.replace(/ /g, '_')}.pdf`,
-                content: pdfBuffer,
-                contentType: 'application/pdf',
-            },
-        ],
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
+        await sendUnifiedEmail({
+            to: user.email,
+            subject: `Your Report is Ready: ${report.title}`,
+            html: `<h1>Hi ${user.name},</h1>
+             <p>Your health report, "${report.title}", is ready.</p>
+             <p>It is attached to this email for your convenience. You can also download it from the app.</p>`,
+            attachments: [
+                {
+                    filename: `${report.title.replace(/ /g, '_')}.pdf`,
+                    content: pdfBuffer,
+                    contentType: 'application/pdf', // Nodemailer needs this, Resend will ignore it
+                },
+            ],
+        });
         console.log(`Report email sent to ${user.email}`);
     } catch (error) {
-        console.error(`Error sending report email to ${user.email}:`, error);
+        // The error is already logged by sendUnifiedEmail
     }
 };
 
