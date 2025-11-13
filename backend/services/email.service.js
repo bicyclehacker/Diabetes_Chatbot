@@ -60,10 +60,16 @@ function getReminderMessage(user, reminder) {
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
+    port: 587,
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+    tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false, // Sometimes helps with self-signed cert issues in cloud
+    }
 });
 
 const sendReminderEmail = async (user, reminder) => {
