@@ -1,53 +1,62 @@
 const nodemailer = require('nodemailer');
 const { format } = require('date-fns');
 
-// --- Configuration & Transporter Setup ---
-
+// --- Configuration ---
+// Check if we are on Render (Production) or Localhost
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// The Name displayed in the inbox
 const SENDER_NAME = "Diabit Bot";
 
-let transporter;
-let senderEmail;
+// -----------------------------------------------------------------------------
+// 1. PRODUCTION SENDER (Brevo HTTP API)
+// Uses Port 443. Never blocked by firewalls.
+// -----------------------------------------------------------------------------
+async function sendViaBrevoApi({ to, subject, html, attachments }) {
+    const url = 'https://api.brevo.com/v3/smtp/email';
 
-if (IS_PRODUCTION) {
-    // ---------------------------------------------------------
-    // PRODUCTION: Use Brevo (Sendinblue)
-    // ---------------------------------------------------------
-    // This prevents "Connection Timeout" errors on Render.
-    // Ensure 'EMAIL_USER' is your Brevo login email.
-    // Ensure 'EMAIL_PASS' is your Brevo SMTP Key (NOT your login password).
+    // Prepare attachments: Brevo API expects Base64 strings
+    let apiAttachments = [];
+    if (attachments && attachments.length > 0) {
+        apiAttachments = attachments.map(att => ({
+            name: att.filename,
+            content: att.content.toString('base64') // Convert Buffer to Base64
+        }));
+    }
 
-    console.log("🚀 Environment: Production (Using Brevo/Sendinblue)");
+    const body = {
+        sender: { name: SENDER_NAME, email: process.env.EMAIL_USER }, // Must be your verified Brevo email
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html,
+        attachment: apiAttachments.length > 0 ? apiAttachments : undefined
+    };
 
-    senderEmail = process.env.EMAIL_USER;
-
-    transporter = nodemailer.createTransport({
-        host: "smtp-relay.brevo.com",
-        port: 587,
-        secure: false, // Use STARTTLS
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
+    // Native Fetch (Node.js 18+)
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'accept': 'application/json',
+            'api-key': process.env.BREVO_API_KEY, // API Key from Brevo Dashboard
+            'content-type': 'application/json'
         },
-        tls: {
-            ciphers: 'SSLv3',
-            rejectUnauthorized: false
-        }
+        body: JSON.stringify(body)
     });
 
-} else {
-    // ---------------------------------------------------------
-    // LOCALHOST: Use Gmail
-    // ---------------------------------------------------------
-    // This is free and easy for local testing.
-    // Ensure 'GMAIL_USER' is your Gmail address.
-    // Ensure 'GMAIL_PASS' is your Google App Password.
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Brevo API Error: ${JSON.stringify(errorData)}`);
+    }
 
-    console.log("💻 Environment: Development (Using Gmail)");
+    return await response.json();
+}
 
-    senderEmail = process.env.GMAIL_USER;
-
-    transporter = nodemailer.createTransport({
+// -----------------------------------------------------------------------------
+// 2. DEVELOPMENT SENDER (Nodemailer + Gmail)
+// Free and easy for localhost testing.
+// -----------------------------------------------------------------------------
+async function sendViaNodemailer({ to, subject, html, attachments }) {
+    const transporter = nodemailer.createTransport({
         service: "gmail",
         port: 587,
         secure: false,
@@ -60,10 +69,40 @@ if (IS_PRODUCTION) {
             rejectUnauthorized: false
         }
     });
+
+    await transporter.sendMail({
+        from: `"${SENDER_NAME}" <${process.env.GMAIL_USER}>`,
+        to,
+        subject,
+        html,
+        attachments // Nodemailer handles Buffers automatically
+    });
 }
 
-// --- Helper: Message Generator ---
+// -----------------------------------------------------------------------------
+// 3. UNIFIED WRAPPER
+// Decides which method to use based on NODE_ENV
+// -----------------------------------------------------------------------------
+async function sendUnifiedEmail({ to, subject, html, attachments = [] }) {
+    try {
+        if (IS_PRODUCTION) {
+            console.log(`🚀 Production: Sending via Brevo API to ${to}`);
+            await sendViaBrevoApi({ to, subject, html, attachments });
+        } else {
+            console.log(`💻 Development: Sending via Gmail to ${to}`);
+            await sendViaNodemailer({ to, subject, html, attachments });
+        }
+        console.log(`✅ Email successfully sent to ${to}`);
+    } catch (error) {
+        console.error(`❌ Failed to send email to ${to}:`, error.message);
+        // We re-throw the error so the controller knows something went wrong (optional)
+        // throw error; 
+    }
+}
 
+// -----------------------------------------------------------------------------
+// 4. MESSAGE TEMPLATES
+// -----------------------------------------------------------------------------
 function getReminderMessage(user, reminder) {
     const formattedDate = format(new Date(reminder.date), "p, EEEE, MMMM d");
 
@@ -121,77 +160,51 @@ function getReminderMessage(user, reminder) {
     }
 }
 
-// --- Sending Functions ---
+// -----------------------------------------------------------------------------
+// 5. EXPORTED FUNCTIONS
+// -----------------------------------------------------------------------------
 
 const sendReminderEmail = async (user, reminder) => {
-    // Check user preferences
-    if (!user.notifications || !user.notifications.emailNotifications) {
+    if (!user.notifications?.emailNotifications) {
         console.log(`Skipping email for ${user.email} (notifications disabled).`);
         return;
     }
 
     const { subject, html } = getReminderMessage(user, reminder);
-
-    const mailOptions = {
-        from: `"${SENDER_NAME}" <${senderEmail}>`,
-        to: user.email,
-        subject,
-        html,
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent to ${user.email} for reminder "${reminder.title}"`);
-    } catch (error) {
-        console.error(`Error sending email to ${user.email}:`, error);
-    }
+    await sendUnifiedEmail({ to: user.email, subject, html });
 };
 
 const sendOtpEmail = async (user, otp) => {
-    const mailOptions = {
-        from: `"${SENDER_NAME}" <${senderEmail}>`,
-        to: user.email,
-        subject: 'Password Reset OTP',
-        html: `<h1>Hi ${user.name},</h1><p>Your OTP for password reset is: <strong>${otp}</strong>. It expires in 10 minutes.</p><p>If you didn't request this, ignore this email.</p>`,
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
-        console.log(`OTP email sent to ${user.email}`);
+        await sendUnifiedEmail({
+            to: user.email,
+            subject: 'Password Reset OTP',
+            html: `<h1>Hi ${user.name},</h1><p>Your OTP for password reset is: <strong>${otp}</strong>. It expires in 10 minutes.</p><p>If you didn't request this, ignore this email.</p>`,
+        });
     } catch (error) {
         console.error(`Error sending OTP email to ${user.email}:`, error);
-        // Important: Throw error so the controller knows the request failed
         throw new Error('Failed to send OTP email');
     }
-}
+};
 
 const sendMedicationEmail = async (user, medication, triggeredTime) => {
-    if (!user.notifications || !user.notifications.emailNotifications) {
+    if (!user.notifications?.emailNotifications) {
         console.log(`Skipping medication email for ${user.email} (notifications disabled).`);
         return;
     }
 
-    const mailOptions = {
-        from: `"${SENDER_NAME}" <${senderEmail}>`,
+    await sendUnifiedEmail({
         to: user.email,
         subject: `Medication Reminder: ${medication.name}`,
         html: `<h1>Hi ${user.name},</h1>
         <p>It's time to take your medication: <strong>${medication.name} (${medication.dosage})</strong>.</p>
         <p>This dose is scheduled for <strong>${triggeredTime}</strong> your time.</p>
         <p>Please don’t forget your dose!</p>`,
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Medication email sent to ${user.email} for "${medication.name}"`);
-    } catch (error) {
-        console.error(`Error sending medication email to ${user.email}:`, error);
-    }
+    });
 };
 
 const sendReportEmail = async (user, report, pdfBuffer) => {
-    const mailOptions = {
-        from: `"${SENDER_NAME}" <${senderEmail}>`,
+    await sendUnifiedEmail({
         to: user.email,
         subject: `Your Report is Ready: ${report.title}`,
         html: `<h1>Hi ${user.name},</h1>
@@ -204,19 +217,7 @@ const sendReportEmail = async (user, report, pdfBuffer) => {
                 contentType: 'application/pdf',
             },
         ],
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Report email sent to ${user.email}`);
-    } catch (error) {
-        console.error(`Error sending report email to ${user.email}:`, error);
-    }
+    });
 };
 
-module.exports = {
-    sendReminderEmail,
-    sendOtpEmail,
-    sendMedicationEmail,
-    sendReportEmail
-};
+module.exports = { sendReminderEmail, sendOtpEmail, sendMedicationEmail, sendReportEmail };
