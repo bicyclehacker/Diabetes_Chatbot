@@ -1,134 +1,117 @@
-
-const { createWorker } = require('tesseract.js')
-
-const { generateSingleResponse } = require('../services/ai.service')
+// controllers/prescriptionController.js
+const { generateResponseWithImage } = require('../services/ai.service');
 const Medication = require('../models/Medication');
 
 exports.uploadPrescription = async (req, res) => {
-    try {
-        console.log('POST Prescription API');
+    let savedMeds = []; // Initialize scope
 
+    try {
+        console.log('POST Prescription API (Gemini Vision)');
 
         if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded.' })
+            return res.status(400).json({ message: 'No file uploaded.' });
         }
 
         console.log('File received:', req.file.originalname);
-        console.log('Starting OCR process...');
 
-        // OCR Logic
-
-        const worker = await createWorker('eng')
-
-        // Pass the image buffer (from multer) to Tesseract
-        // req.file.buffer is available because you use multer.memoryStorage()
-        const { data: { text } } = await worker.recognize(req.file.buffer);
-
-        console.log('Extracted Text:');
-        console.log(text);
-
-        // Terminate the worker to free up resources
-        await worker.terminate();
-
-
-        //AI worker to parse json
-
-        let aiData = null;
-        let savedMedication = []
-        let extractedText = text
-
+        // Define the prompt for the image
         const prompt = `
-            Analyze the following prescription text.
+            Analyze the uploaded image of a medical prescription.
+            
+            *** GOAL ***
+            Extract medication details into a strict JSON structure.
+            
+            *** CONTEXT ***
+            1. This is a raw image. Handwriting may be difficult to read. Use your best judgment to correct spelling (e.g., "Mctformin" -> "Metformin").
+            2. Translate medical abbreviations (bid, tid, po, ac) into simple English instructions in the "notes".
 
-            *** IMPORTANT CONTEXT ***
-            1.  **OCR Errors:** The text comes from a raw OCR scan and likely contains spelling errors (e.g., "Mctformin", "dosge", "takc"). You MUST correct these to the most logical medication name, dosage, or instruction.
-            2.  **Medical Jargon:** The text may use medical shorthand (e.g., "bid", "ac", "po", "qid"). You MUST translate this into simple, user-friendly language.
+            *** REQUIRED JSON STRUCTURE ***
+            Return ONLY a raw JSON object (no markdown formatting) with this schema:
+            {
+              "patientName": "string or null",
+              "doctorName": "string or null",
+              "medications": [
+                {
+                  "name": "string (Corrected Drug Name)",
+                  "dosage": "string (e.g., 500mg)",
+                  "times": ["HH:mm", "HH:mm"] (24h format inferred from frequency),
+                  "frequency": "Once Daily" | "Twice Daily" | "Three Times Daily" | "As Needed",
+                  "notes": "string (Translate instructions like 'take with food' or 'before bed')"
+                }
+              ]
+            }
 
-            Return a structured JSON object with these keys:
-            1. "medications": An array of objects.
-            2. "patientName": The full name of the patient (correct any OCR misspellings), or null.
-            3. "doctorName": The full name of the doctor (correct any OCR misspellings), or null.
-
-            Each object in the "medications" array MUST have the following keys:
-            - "name": The corrected, full medication name (e.g., "Metformin").
-            - "dosage": The corrected dosage string (e.g., "500mg").
-            - "times": An array of strings for recommended times
-                        If no time is given, provide logical defaults based on frequency. 
-                        You MUST return times in 24-hour "HH:mm" format (e.g., ["08:00", "20:00"]).
-            - "notes": Any extra notes, or null.
-            - "frequency": You MUST map this to one of the following exact strings:
-                * "Once Daily"
-                * "Twice Daily"
-                * "Three Times Daily"
-                * "As Needed"
-
-            *** FREQUENCY & NOTES RULE (VERY IMPORTANT) ***
-            -   If the prescription says "bid" or "twice a day", set "frequency" to "Twice Daily".
-            -   If the prescription says "tid" or "three times a day", set "frequency" to "Three Times Daily".
-            -   If the prescription says "qid", "four times a day", "every 6 hours", or any other frequency NOT in the list, you MUST:
-                1.  Set the "frequency" key to "As Needed".
-                2.  Put the FULL, TRANSLATED, user-friendly instruction (e.g., "Take one pill four times a day with food") into the "notes" key.
-            -   ALWAYS add translated jargon to the notes. (e.g., if you see 'ac', add "Take before meals." to the notes).
-
-            Prescription Text:
-            """
-            ${extractedText}
-            """
+            *** FREQUENCY RULES ***
+            - "bid" / twice a day -> "Twice Daily"
+            - "tid" / three times a day -> "Three Times Daily"
+            - "qid" / four times a day -> "As Needed" (and add "Take 4 times a day" to notes)
         `;
 
-        if (extractedText) {
-            const aiAnalysisString = await generateSingleResponse(prompt);
-            console.log('--- AI Analysis String ---');
-            console.log(aiAnalysisString);
+        console.log('Sending image to Gemini 1.5 Flash...');
 
-            try {
-                const cleanJsonString = aiAnalysisString
-                    .replace(/```json/g, '')
-                    .replace(/```/g, '');
+        // Call the updated AI service with the buffer directly
+        // req.file.buffer is the raw image data
+        // req.file.mimetype ensures we tell Gemini if it's png/jpeg/webp
+        const aiAnalysisString = await generateResponseWithImage(
+            prompt,
+            req.file.buffer,
+            req.file.mimetype
+        );
 
-                aiData = JSON.parse(cleanJsonString);
+        console.log('--- AI Analysis String ---');
+        console.log(aiAnalysisString);
 
-                if (aiData && aiData.medications && aiData.medications.length > 0) {
-                    console.log(`AI found ${aiData.medications.length} medications. Saving...`);
+        // --- Parse Logic (Same as before) ---
+        let aiData = null;
 
-                    const savePromises = aiData.medications.map(med => {
-                        if (!med.name || !med.dosage || !med.frequency || !med.times) {
-                            console.warn('Skipping med with missing data:', med.name);
-                            return Promise.resolve(null);
-                        }
+        try {
+            // Sanitize string just in case Gemini wraps it in markdown
+            const cleanJsonString = aiAnalysisString
+                .replace(/```json/g, '')
+                .replace(/```/g, '')
+                .trim();
 
-                        const newMedication = new Medication({
-                            user: req.user.id,
-                            name: med.name,
-                            dosage: med.dosage,
-                            frequency: med.frequency,
-                            times: med.times,
-                            notes: med.notes || 'Auto-generated from prescription.'
-                        });
+            aiData = JSON.parse(cleanJsonString);
 
-                        return newMedication.save();
+            if (aiData && aiData.medications && aiData.medications.length > 0) {
+                console.log(`AI found ${aiData.medications.length} medications. Saving...`);
+
+                const savePromises = aiData.medications.map(med => {
+                    // Basic validation
+                    if (!med.name) return Promise.resolve(null);
+
+                    const newMedication = new Medication({
+                        user: req.user.id,
+                        name: med.name,
+                        dosage: med.dosage || 'TBD',
+                        frequency: med.frequency || 'As Needed',
+                        times: med.times || [],
+                        notes: med.notes || 'Auto-generated from prescription scan.'
                     });
 
-                    const results = await Promise.all(savePromises);
-                    savedMeds = results.filter(med => med !== null);
+                    return newMedication.save();
+                });
 
-                }
-            } catch (jsonError) {
-                console.error('Failed to parse AI JSON response:', jsonError);
-                aiData = { error: 'Failed to parse AI response', raw: aiAnalysisString };
+                const results = await Promise.all(savePromises);
+                savedMeds = results.filter(med => med !== null);
             }
-        }
-        else {
-            console.log('Skipping AI analysis (not enough text).');
+        } catch (jsonError) {
+            console.error('Failed to parse AI JSON response:', jsonError);
+            // Handle error gracefully, perhaps return raw text to user to manually fix
+            return res.status(422).json({
+                message: 'Could not read prescription format.',
+                rawResponse: aiAnalysisString
+            });
         }
 
         res.status(200).json({
             message: `File processed! ${savedMeds.length} new medications added.`,
             file: req.file.originalname,
-            extractedText: extractedText,
-            aiAnalysis: aiData, // Send the parsed JSON object
-            savedMedications: savedMeds // Send the newly created documents
+            patient: aiData?.patientName,
+            doctor: aiData?.doctorName,
+            savedMedications: savedMeds
         });
+
     } catch (error) {
         console.error('POST error:', error);
         res.status(500).json({ error: 'Internal Server Error' });

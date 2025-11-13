@@ -57,7 +57,25 @@ const Prescription: React.FC<PrescriptionProps> = ({ onUploadSuccess }) => {
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         const uploaded = e.target.files?.[0];
+
         if (uploaded) {
+            // 1. Check if it is an image
+            if (!uploaded.type.startsWith('image/')) {
+                toast.error(
+                    'Please upload a valid image file (JPG, PNG, WEBP).'
+                );
+                return; // Stop execution, don't set the file
+            }
+
+            // 2. (Optional) Check file size - e.g., limit to 5MB
+            if (uploaded.size > 5 * 1024 * 1024) {
+                toast.error(
+                    'File is too large. Please upload an image under 5MB.'
+                );
+                return;
+            }
+
+            toast.info(`File selected: ${uploaded.name}`);
             setFile(uploaded);
             setPreview(URL.createObjectURL(uploaded));
         }
@@ -115,7 +133,7 @@ const Prescription: React.FC<PrescriptionProps> = ({ onUploadSuccess }) => {
                             key={inputKey}
                             id="file"
                             type="file"
-                            accept="image/*,application/pdf"
+                            accept="image/*"
                             onChange={handleFileChange}
                             className="file:rounded-md file:border-0 file:text-sm file:font-medium 
                                     file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 

@@ -5,6 +5,8 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 // Choose model
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+// model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
 
 /**
  * For single, self-contained prompts (like prescription analysis).
@@ -147,9 +149,58 @@ const generateNutritionInfo = async (foodString) => {
     }
 };
 
+/**
+ * For single-turn analysis of images (Vision).
+ * @param {string} prompt - The specific instruction (e.g., "Parse this prescription").
+ * @param {Buffer} imageBuffer - The raw image buffer (from req.file.buffer).
+ * @param {string} mimeType - The mime type of the image (e.g., 'image/png').
+ * @returns {Promise<string>} The generated text response.
+ */
+const generateResponseWithImage = async (prompt, imageBuffer, mimeType) => {
+    if (!prompt || !imageBuffer) {
+        throw new Error("Prompt and Image Buffer are required");
+    }
+
+    console.log('Sending vision prompt to Gemini AI...');
+    try {
+        // Convert Buffer to Generative AI Image Part format
+        const imagePart = {
+            inlineData: {
+                data: imageBuffer.toString("base64"),
+                mimeType: mimeType
+            }
+        };
+
+        // Combine the text prompt and the image into the user role
+        const contents = [
+            {
+                role: 'user',
+                parts: [
+                    { text: prompt },
+                    imagePart
+                ]
+            }
+        ];
+
+        // Generate content (Stateless - ideal for single images)
+        const result = await model.generateContent({
+            contents: contents,
+        });
+
+        const response = result.response;
+        const text = response.text();
+        return text;
+
+    } catch (error) {
+        console.error("Error generating vision response:", error);
+        throw new Error("Failed to analyze image. Check server logs.");
+    }
+};
+
 module.exports = {
     generateSingleResponse,
     generateChatResponse,
     generateChatTitle,
-    generateNutritionInfo
+    generateNutritionInfo,
+    generateResponseWithImage
 };
