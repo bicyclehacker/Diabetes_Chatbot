@@ -15,12 +15,28 @@ import { ChatMessageArea } from '@/components/chat/ChatMessageArea';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatRenameDialog } from '@/components/chat/ChatRenameDialog';
 
+export interface ISource {
+    id: string; // e.g., "[Source 1]"
+    preview: string; // e.g., "322 - 328 ...."
+
+    // These are the fields from your metadata
+    source?: string; // e.g., "data/diabetesone.pdf"
+    title?: string; // e.g., "Textbook of Diabetes, FOURTH EDITION"
+    author?: string; // e.g., "RICHARD I.G. HOLT"
+    page?: number | string; // e.g., 936
+    url?: string; // We'll keep checking for this, in case your data has it
+
+    // For any other fields that might exist
+    [key: string]: any;
+}
+
 export function ChatbotInterface() {
     // --- STATE MANAGEMENT ---
     const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(
         null
     );
+    const [currentSources, setCurrentSources] = useState<ISource[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [input, setInput] = useState('');
 
@@ -241,6 +257,7 @@ export function ChatbotInterface() {
             )
         );
 
+        setCurrentSources([]);
         setIsLoading(true);
         setInput('');
 
@@ -252,7 +269,11 @@ export function ChatbotInterface() {
             );
 
             // Destructure the response from the backend
-            const { botMessage: assistantResponse, newTitle } = responseData;
+            const {
+                botMessage: assistantResponse,
+                newTitle,
+                sources,
+            } = responseData;
 
             const assistantMessage: Message = {
                 id: assistantResponse._id,
@@ -260,6 +281,8 @@ export function ChatbotInterface() {
                 content: assistantResponse.content,
                 timestamps: new Date(assistantResponse.createdAt),
             };
+
+            setCurrentSources(sources);
 
             // UPDATE UI WITH BOT MESSAGE AND NEW TITLE
             setChatSessions((prev) =>
@@ -328,7 +351,7 @@ export function ChatbotInterface() {
             )}
 
             {/* Desktop Sidebar */}
-            <div className="hidden lg:block w-80 border-r border-gray-200">
+            <div className="hidden md:block w-100 border-r border-gray-200">
                 <ChatSidebar
                     sessions={chatSessions}
                     currentSessionId={currentSessionId}
@@ -365,6 +388,7 @@ export function ChatbotInterface() {
                     isLoading={isLoading}
                     onSuggestionClick={handleSuggestionClick}
                     messagesEndRef={messagesEndRef}
+                    sources={currentSources}
                 />
 
                 <ChatInput

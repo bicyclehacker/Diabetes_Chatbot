@@ -8,12 +8,14 @@ import type { ChatSession } from '@/types/chat';
 
 import { ChatWelcome } from '@/components/chat/ChatWelcome';
 import { ChatMessage } from '@/components/chat/ChatMessage';
+import { ISource } from '../chatbot-interface';
 
 interface ChatMessageAreaProps {
     session: ChatSession | undefined;
     isLoading: boolean;
     onSuggestionClick: (prompt: string) => void;
     messagesEndRef: React.Ref<HTMLDivElement>;
+    sources: ISource[];
 }
 
 export function ChatMessageArea({
@@ -21,6 +23,7 @@ export function ChatMessageArea({
     isLoading,
     onSuggestionClick,
     messagesEndRef,
+    sources,
 }: ChatMessageAreaProps) {
     return (
         <ScrollArea className="flex-1 bg-gray-50">
@@ -29,8 +32,15 @@ export function ChatMessageArea({
                     <ChatWelcome onSuggestionClick={onSuggestionClick} />
                 ) : (
                     <div className="space-y-6">
-                        {session.messages.map((message) => (
-                            <ChatMessage key={message.id} message={message} />
+                        {session.messages.map((message, index) => (
+                            <ChatMessage
+                                key={message.id}
+                                message={message}
+                                sources={sources}
+                                isLastMessage={
+                                    index === session.messages.length - 1
+                                }
+                            />
                         ))}
 
                         {isLoading && (
