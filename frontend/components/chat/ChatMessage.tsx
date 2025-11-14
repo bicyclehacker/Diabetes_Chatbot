@@ -88,6 +88,7 @@ export function ChatMessage({
           */}
                     {message.role === 'bot' &&
                         isLastMessage &&
+                        sources &&
                         sources.length > 0 && (
                             <div className="mt-3 w-full space-y-2 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
                                 <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-700">

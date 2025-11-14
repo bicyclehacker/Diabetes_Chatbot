@@ -104,6 +104,7 @@ export function ChatbotInterface() {
         if (currentSessionId === sessionId) return;
 
         setCurrentSessionId(sessionId);
+        setCurrentSources([]);
         setSidebarOpen(false); // Close sidebar on mobile
 
         const chat = sessionsList.find((s) => s.id === sessionId);
@@ -152,6 +153,7 @@ export function ChatbotInterface() {
                 updatedAt: new Date(data.updatedAt),
             };
 
+            setCurrentSources([]);
             setChatSessions((prev) => [newSession, ...prev]);
             setCurrentSessionId(newSession.id);
             setSidebarOpen(false);
@@ -282,8 +284,6 @@ export function ChatbotInterface() {
                 timestamps: new Date(assistantResponse.createdAt),
             };
 
-            setCurrentSources(sources);
-
             // UPDATE UI WITH BOT MESSAGE AND NEW TITLE
             setChatSessions((prev) =>
                 prev.map((s) => {
@@ -300,6 +300,7 @@ export function ChatbotInterface() {
                     return s;
                 })
             );
+            setCurrentSources(sources);
         } catch (error) {
             console.error('Error sending message:', error);
             // Error handling (unchanged)

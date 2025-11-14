@@ -9,7 +9,7 @@ const axios = require('axios'); // <-- IMPORT AXIOS
 const { generateChatResponse, generateChatTitle } = require('../services/ai.service');
 
 // URL for your new Python RAG service
-const RAG_SERVICE_URL = 'http://localhost:5001/api/get-context';
+const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL;
 
 const SYSTEM_INSTRUCTION = `You are a compassionate, evidence-based diabetes care assistant. Your role is to support users with safe, practical, and personalized guidance on diabetes self-management while staying within your informational scope.
 
@@ -76,7 +76,7 @@ ${glucoseReadings.map(g => `- ${g.level} mg/dL (${g.readingType}) on ${g.recorde
 
         try {
             console.log(`[RAG] Querying RAG service for: "${userContent}"`);
-            const ragResponse = await axios.post(process.env.RAG_SERVICE_URL, {
+            const ragResponse = await axios.post(RAG_SERVICE_URL, {
                 query: userContent
             });
 
